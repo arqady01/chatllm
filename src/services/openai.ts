@@ -303,16 +303,30 @@ export class OpenAIService {
         throw new Error('Invalid response format from models API');
       }
 
-      // 过滤出聊天模型（通常包含gpt、chat等关键词）
-      const chatModels = data.data.filter(model =>
-        model.id.includes('gpt') ||
-        model.id.includes('chat') ||
-        model.id.includes('turbo') ||
-        model.id.includes('claude') ||
-        model.id.includes('llama') ||
-        model.id.includes('mistral') ||
-        model.id.includes('qwen')
-      );
+      console.log(`📊 Total models received: ${data.data.length}`);
+      console.log('📋 All models:', data.data.map(m => m.id));
+
+      // 过滤掉明显不是聊天模型的（如embedding、whisper等）
+      const excludeKeywords = [
+        'embedding', 'embed', 'whisper', 'tts', 'dall-e', 'davinci-edit',
+        'text-search', 'text-similarity', 'code-search', 'moderation'
+      ];
+
+      const chatModels = data.data.filter(model => {
+        const modelId = model.id.toLowerCase();
+
+        // 排除明显不是聊天模型的
+        const shouldExclude = excludeKeywords.some(keyword => modelId.includes(keyword));
+        if (shouldExclude) {
+          console.log(`❌ Excluded model: ${model.id} (contains excluded keyword)`);
+          return false;
+        }
+
+        console.log(`✅ Included model: ${model.id}`);
+        return true;
+      });
+
+      console.log(`📊 Filtered models count: ${chatModels.length}`);
 
       // 按名称排序
       return chatModels.sort((a, b) => a.id.localeCompare(b.id));

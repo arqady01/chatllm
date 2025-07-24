@@ -1,366 +1,142 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Modal,
-  FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { useApp } from '../contexts/AppContext';
-import { ModelInfo } from '../types';
-import BaseUrlGuide from '../components/BaseUrlGuide';
 
-const SettingsScreen: React.FC = () => {
-  const { config, updateConfig, testConnection, clearMessages, getAvailableModels, detectBaseUrl } = useApp();
-  const [apiKey, setApiKey] = useState(config.apiKey);
-  const [baseUrl, setBaseUrl] = useState(config.baseUrl);
-  const [model, setModel] = useState(config.model);
-  const [isTestingConnection, setIsTestingConnection] = useState(false);
-  const [isFetchingModels, setIsFetchingModels] = useState(false);
-  const [isDetectingUrl, setIsDetectingUrl] = useState(false);
-  const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
-  const [showModelPicker, setShowModelPicker] = useState(false);
+type SettingsStackParamList = {
+  SettingsMain: undefined;
+  ApiConfig: undefined;
+  DataManagement: undefined;
+};
 
-  const handleSave = async () => {
-    if (!apiKey.trim()) {
-      Alert.alert('错误', '请输入API Key');
-      return;
-    }
+type SettingsScreenNavigationProp = StackNavigationProp<SettingsStackParamList, 'SettingsMain'>;
 
-    if (!baseUrl.trim()) {
-      Alert.alert('错误', '请输入Base URL');
-      return;
-    }
+const SettingsScreen: React.FC<{ navigation: SettingsScreenNavigationProp }> = ({ navigation }) => {
+  const { config, messages } = useApp();
 
-    const newConfig = {
-      apiKey: apiKey.trim(),
-      baseUrl: baseUrl.trim().replace(/\/$/, ''), // Remove trailing slash
-      model: model.trim() || 'gpt-3.5-turbo',
-    };
-
-    await updateConfig(newConfig);
-    Alert.alert('成功', '设置已保存');
-  };
-
-  const handleTestConnection = async () => {
-    if (!apiKey.trim() || !baseUrl.trim()) {
-      Alert.alert('错误', '请先填写API Key和Base URL');
-      return;
-    }
-
-    setIsTestingConnection(true);
-    
-    const tempConfig = {
-      apiKey: apiKey.trim(),
-      baseUrl: baseUrl.trim().replace(/\/$/, ''),
-      model: model.trim() || 'gpt-3.5-turbo',
-    };
-
-    await updateConfig(tempConfig);
-    
+  const navigateToApiConfig = () => {
+    console.log('Navigating to ApiConfig...');
     try {
-      const isConnected = await testConnection();
-      Alert.alert(
-        isConnected ? '连接成功' : '连接失败',
-        isConnected ? 'API连接正常' : '请检查API Key和Base URL是否正确'
-      );
+      navigation.navigate('ApiConfig');
     } catch (error) {
-      Alert.alert('连接失败', '请检查网络连接和API配置');
-    } finally {
-      setIsTestingConnection(false);
+      console.error('Navigation error:', error);
     }
   };
 
-  const handleFetchModels = async () => {
-    if (!apiKey.trim() || !baseUrl.trim()) {
-      Alert.alert('错误', '请先填写API Key和Base URL');
-      return;
+  const navigateToDataManagement = () => {
+    console.log('Navigating to DataManagement...');
+    try {
+      navigation.navigate('DataManagement');
+    } catch (error) {
+      console.error('Navigation error:', error);
     }
+  };
 
-    setIsFetchingModels(true);
+  const getConfigStatus = () => {
+    if (!config.apiKey || !config.baseUrl) {
+      return { status: '未配置', color: '#FF3B30', icon: 'warning-outline' };
+    }
+    return { status: '已配置', color: '#34C759', icon: 'checkmark-circle-outline' };
+  };
 
-    // 临时更新配置以获取模型
-    const tempConfig = {
-      apiKey: apiKey.trim(),
-      baseUrl: baseUrl.trim().replace(/\/$/, ''),
-      model: model.trim() || 'gpt-3.5-turbo',
+  const getDataStats = () => {
+    const messageCount = messages.length;
+    return {
+      count: messageCount,
+      status: messageCount > 0 ? `${messageCount} 条消息` : '暂无数据',
     };
-
-    await updateConfig(tempConfig);
-
-    try {
-      const models = await getAvailableModels();
-      setAvailableModels(models);
-
-      if (models.length === 0) {
-        Alert.alert('提示', '未找到可用的聊天模型');
-      } else {
-        Alert.alert('成功', `获取到 ${models.length} 个可用模型`);
-        setShowModelPicker(true);
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '获取模型失败';
-      Alert.alert('获取模型失败', errorMessage);
-    } finally {
-      setIsFetchingModels(false);
-    }
   };
 
-  const handleDetectBaseUrl = async () => {
-    if (!apiKey.trim()) {
-      Alert.alert('错误', '请先填写API Key');
-      return;
-    }
-
-    if (!baseUrl.trim()) {
-      Alert.alert('错误', '请先填写Base URL');
-      return;
-    }
-
-    setIsDetectingUrl(true);
-
-    try {
-      const result = await detectBaseUrl(baseUrl.trim(), apiKey.trim());
-
-      if (result.isValid) {
-        setBaseUrl(result.baseUrl);
-
-        let message = '';
-        if (result.isForceMode) {
-          message = `🔒 强制模式检测成功！\n\n使用完整URL: ${result.baseUrl}\n\n注意：强制模式下不会自动添加任何端点路径。`;
-        } else {
-          message = `检测成功！\n正确的Base URL: ${result.baseUrl}`;
-          if (result.detectedEndpoints.length > 1) {
-            message += `\n\n发现 ${result.detectedEndpoints.length} 个可用端点：\n${result.detectedEndpoints.join('\n')}`;
-          }
-        }
-
-        Alert.alert('Base URL检测成功', message, [
-          {
-            text: '确定',
-            onPress: () => {
-              // 自动保存检测到的正确URL
-              const newConfig = {
-                apiKey: apiKey.trim(),
-                baseUrl: result.baseUrl,
-                model: model.trim() || 'gpt-3.5-turbo',
-              };
-              updateConfig(newConfig);
-            }
-          }
-        ]);
-      } else {
-        let errorMessage = '无法找到有效的API端点。请检查：\n\n1. URL是否正确\n2. API Key是否有效\n3. 网络连接是否正常\n4. 服务是否支持OpenAI格式';
-
-        if (result.errorDetails) {
-          errorMessage += `\n\n详细错误信息：\n${result.errorDetails}`;
-        }
-
-        Alert.alert('Base URL检测失败', errorMessage);
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '检测失败';
-      Alert.alert('Base URL检测失败', errorMessage);
-    } finally {
-      setIsDetectingUrl(false);
-    }
-  };
-
-  const handleSelectModel = (selectedModel: ModelInfo) => {
-    setModel(selectedModel.id);
-    setShowModelPicker(false);
-  };
-
-  const handleClearMessages = () => {
-    Alert.alert(
-      '确认清除',
-      '确定要清除所有聊天记录吗？此操作不可撤销。',
-      [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '确定',
-          style: 'destructive',
-          onPress: async () => {
-            await clearMessages();
-            Alert.alert('成功', '聊天记录已清除');
-          },
-        },
-      ]
-    );
-  };
+  const configStatus = getConfigStatus();
+  const dataStats = getDataStats();
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>API 配置</Text>
+    <ScrollView style={styles.container}>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>⚙️ 配置管理</Text>
+        
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={navigateToApiConfig}
+        >
+          <View style={styles.menuIcon}>
+            <Ionicons name="key-outline" size={24} color="#007AFF" />
+          </View>
+          <View style={styles.menuContent}>
+            <Text style={styles.menuTitle}>API 配置</Text>
+            <Text style={styles.menuSubtitle}>配置API Key、Base URL和模型</Text>
+            <View style={styles.statusContainer}>
+              <Ionicons 
+                name={configStatus.icon as any} 
+                size={16} 
+                color={configStatus.color} 
+              />
+              <Text style={[styles.statusText, { color: configStatus.color }]}>
+                {configStatus.status}
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#ccc" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>🗂️ 数据管理</Text>
+        
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={navigateToDataManagement}
+        >
+          <View style={styles.menuIcon}>
+            <Ionicons name="folder-outline" size={24} color="#34C759" />
+          </View>
+          <View style={styles.menuContent}>
+            <Text style={styles.menuTitle}>数据管理</Text>
+            <Text style={styles.menuSubtitle}>管理聊天记录和应用数据</Text>
+            <View style={styles.statusContainer}>
+              <Ionicons name="document-text-outline" size={16} color="#666" />
+              <Text style={styles.statusText}>
+                {dataStats.status}
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#ccc" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>ℹ️ 应用信息</Text>
+        
+        <View style={styles.infoContainer}>
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>应用名称</Text>
+            <Text style={styles.infoValue}>MelonWise AI</Text>
+          </View>
           
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>API Key *</Text>
-            <TextInput
-              style={styles.input}
-              value={apiKey}
-              onChangeText={setApiKey}
-              placeholder="请输入您的API Key"
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>版本号</Text>
+            <Text style={styles.infoValue}>1.0.0</Text>
           </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Base URL *</Text>
-            <View style={styles.urlInputContainer}>
-              <TextInput
-                style={[styles.input, styles.urlInput]}
-                value={baseUrl}
-                onChangeText={setBaseUrl}
-                placeholder="https://api.openai.com/v1"
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-              />
-              <TouchableOpacity
-                style={[styles.detectUrlButton, isDetectingUrl && styles.detectUrlButtonDisabled]}
-                onPress={handleDetectBaseUrl}
-                disabled={isDetectingUrl}
-              >
-                <Ionicons
-                  name={isDetectingUrl ? "refresh" : "search-outline"}
-                  size={16}
-                  color="white"
-                />
-                <Text style={styles.detectUrlButtonText}>
-                  {isDetectingUrl ? '检测中...' : '智能检测'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.urlHint}>
-              💡 智能模式：输入域名（如：https://api.example.com），点击"智能检测"自动找到正确端点{'\n'}
-              🔒 强制模式：输入完整URL并在末尾加#号（如：https://api.example.com/v1/chat/completions#）强制使用指定URL
-            </Text>
-            <BaseUrlGuide onSelectExample={setBaseUrl} />
+          
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>技术栈</Text>
+            <Text style={styles.infoValue}>React Native + Expo</Text>
           </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>模型</Text>
-            <View style={styles.modelInputContainer}>
-              <TextInput
-                style={[styles.input, styles.modelInput]}
-                value={model}
-                onChangeText={setModel}
-                placeholder="gpt-3.5-turbo"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <TouchableOpacity
-                style={[styles.fetchModelsButton, isFetchingModels && styles.fetchModelsButtonDisabled]}
-                onPress={handleFetchModels}
-                disabled={isFetchingModels}
-              >
-                <Ionicons
-                  name={isFetchingModels ? "refresh" : "download-outline"}
-                  size={16}
-                  color="white"
-                />
-                <Text style={styles.fetchModelsButtonText}>
-                  {isFetchingModels ? '获取中...' : '获取模型'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+          
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>开发语言</Text>
+            <Text style={styles.infoValue}>TypeScript</Text>
           </View>
         </View>
-
-        <View style={styles.buttonGroup}>
-          <TouchableOpacity
-            style={[styles.button, styles.testButton]}
-            onPress={handleTestConnection}
-            disabled={isTestingConnection}
-          >
-            <Text style={styles.buttonText}>
-              {isTestingConnection ? '测试中...' : '测试连接'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={handleSave}>
-            <Text style={styles.buttonText}>保存设置</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>数据管理</Text>
-          <TouchableOpacity
-            style={[styles.button, styles.dangerButton]}
-            onPress={handleClearMessages}
-          >
-            <Text style={styles.buttonText}>清除聊天记录</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-
-      {/* 模型选择器 Modal */}
-      <Modal
-        visible={showModelPicker}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowModelPicker(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>选择模型</Text>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setShowModelPicker(false)}
-            >
-              <Ionicons name="close" size={24} color="#666" />
-            </TouchableOpacity>
-          </View>
-
-          <FlatList
-            data={availableModels}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  styles.modelItem,
-                  item.id === model && styles.modelItemSelected
-                ]}
-                onPress={() => handleSelectModel(item)}
-              >
-                <View style={styles.modelItemContent}>
-                  <Text style={[
-                    styles.modelItemTitle,
-                    item.id === model && styles.modelItemTitleSelected
-                  ]}>
-                    {item.id}
-                  </Text>
-                  <Text style={[
-                    styles.modelItemSubtitle,
-                    item.id === model && styles.modelItemSubtitleSelected
-                  ]}>
-                    由 {item.owned_by} 提供
-                  </Text>
-                </View>
-                {item.id === model && (
-                  <Ionicons name="checkmark" size={20} color="#007AFF" />
-                )}
-              </TouchableOpacity>
-            )}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
-      </Modal>
-    </KeyboardAvoidingView>
+      </View>
+    </ScrollView>
   );
 };
 
@@ -368,9 +144,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
-  },
-  scrollView: {
-    flex: 1,
     padding: 20,
   },
   section: {
@@ -390,157 +163,64 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     color: '#333',
   },
-  inputGroup: {
-    marginBottom: 15,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 5,
-    color: '#333',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-  },
-  buttonGroup: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  button: {
-    flex: 1,
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginHorizontal: 5,
-  },
-  testButton: {
-    backgroundColor: '#007AFF',
-  },
-  saveButton: {
-    backgroundColor: '#34C759',
-  },
-  dangerButton: {
-    backgroundColor: '#FF3B30',
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  urlInputContainer: {
+  menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  urlInput: {
-    flex: 1,
-  },
-  detectUrlButton: {
-    backgroundColor: '#FF9500',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  detectUrlButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  detectUrlButtonText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  urlHint: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-    lineHeight: 16,
-  },
-  modelInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  modelInput: {
-    flex: 1,
-  },
-  fetchModelsButton: {
-    backgroundColor: '#34C759',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  fetchModelsButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  fetchModelsButtonText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  modalCloseButton: {
-    padding: 4,
-  },
-  modelItem: {
-    backgroundColor: 'white',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
-    flexDirection: 'row',
+  },
+  menuIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f8f9fa',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    marginRight: 15,
   },
-  modelItemSelected: {
-    backgroundColor: '#f0f8ff',
-  },
-  modelItemContent: {
+  menuContent: {
     flex: 1,
   },
-  modelItemTitle: {
+  menuTitle: {
     fontSize: 16,
     fontWeight: '500',
     color: '#333',
     marginBottom: 4,
   },
-  modelItemTitleSelected: {
-    color: '#007AFF',
-  },
-  modelItemSubtitle: {
+  menuSubtitle: {
     fontSize: 14,
     color: '#666',
+    marginBottom: 6,
   },
-  modelItemSubtitleSelected: {
-    color: '#007AFF',
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusText: {
+    fontSize: 12,
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+  infoContainer: {
+    // 可以添加特定样式
+  },
+  infoItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  infoLabel: {
+    fontSize: 16,
+    color: '#333',
+  },
+  infoValue: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
   },
 });
 
