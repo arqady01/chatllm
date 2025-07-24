@@ -122,31 +122,7 @@ const SettingsScreen: React.FC<{ navigation: SettingsScreenNavigationProp }> = (
         </TouchableOpacity>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>ℹ️ 应用信息</Text>
-        
-        <View style={styles.infoContainer}>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>应用名称</Text>
-            <Text style={styles.infoValue}>MelonWise AI</Text>
-          </View>
-          
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>版本号</Text>
-            <Text style={styles.infoValue}>1.0.0</Text>
-          </View>
-          
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>技术栈</Text>
-            <Text style={styles.infoValue}>React Native + Expo</Text>
-          </View>
-          
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>开发语言</Text>
-            <Text style={styles.infoValue}>TypeScript</Text>
-          </View>
-        </View>
-      </View>
+
     </ScrollView>
     </View>
   );
