@@ -70,7 +70,7 @@ const AppNavigator: React.FC = () => {
 
             return <Ionicons name={iconName} size={size} color={color} />;
           },
-          tabBarActiveTintColor: '#007AFF',
+          tabBarActiveTintColor: '#000000',
           tabBarInactiveTintColor: 'gray',
           headerShown: false, // 隐藏Tab导航的header，使用Stack导航的header
         })}
