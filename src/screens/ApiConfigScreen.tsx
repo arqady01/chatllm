@@ -11,6 +11,7 @@ import {
   Platform,
   Modal,
   FlatList,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../contexts/AppContext';
@@ -188,6 +189,9 @@ const ApiConfigScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* 设置状态栏样式 */}
+      <StatusBar barStyle="dark-content" backgroundColor="#f5f5f5" />
+
       {/* 自定义标题栏 */}
       <View style={styles.header}>
         <TouchableOpacity

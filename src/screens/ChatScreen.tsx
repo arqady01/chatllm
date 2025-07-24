@@ -10,6 +10,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../contexts/AppContext';
@@ -79,6 +80,9 @@ const ChatScreen: React.FC = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
+      {/* 设置状态栏样式 */}
+      <StatusBar barStyle="dark-content" backgroundColor="#f5f5f5" />
+
       {/* 自定义标题栏 */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>MelonWise</Text>
