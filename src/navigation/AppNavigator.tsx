@@ -24,37 +24,28 @@ const SettingsStack: React.FC = () => {
     <Stack.Navigator
       initialRouteName="SettingsMain"
       screenOptions={{
-        headerStyle: {
-          backgroundColor: '#007AFF',
-        },
-        headerTintColor: 'white',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
+        headerShown: false, // 隐藏所有header
       }}
     >
       <Stack.Screen
         name="SettingsMain"
         component={SettingsScreen}
         options={{
-          title: '设置',
-          headerTitle: '设置'
+          headerShown: false
         }}
       />
       <Stack.Screen
         name="ApiConfig"
         component={ApiConfigScreen}
         options={{
-          title: 'API 配置',
-          headerTitle: 'API 配置'
+          headerShown: false
         }}
       />
       <Stack.Screen
         name="DataManagement"
         component={DataManagementScreen}
         options={{
-          title: '数据管理',
-          headerTitle: '数据管理'
+          headerShown: false
         }}
       />
     </Stack.Navigator>
@@ -89,15 +80,7 @@ const AppNavigator: React.FC = () => {
           component={ChatScreen}
           options={{
             title: '聊天',
-            headerShown: true,
-            headerStyle: {
-              backgroundColor: '#007AFF',
-            },
-            headerTintColor: 'white',
-            headerTitleStyle: {
-              fontWeight: 'bold',
-            },
-            headerTitle: 'MelonWise AI'
+            headerShown: false, // 移除聊天页面的header
           }}
         />
         <Tab.Screen

@@ -74,11 +74,15 @@ const ChatScreen: React.FC = () => {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
+    <KeyboardAvoidingView
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
+      {/* 自定义标题栏 */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>MelonWise</Text>
+      </View>
       <FlatList
         ref={flatListRef}
         data={messages}
@@ -132,6 +136,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  header: {
+    backgroundColor: '#f5f5f5',
+    paddingTop: Platform.OS === 'ios' ? 50 : 20, // 适配状态栏
+    paddingBottom: 15,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
   },
   messagesList: {
     flex: 1,

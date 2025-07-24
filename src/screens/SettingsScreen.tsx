@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -58,7 +59,13 @@ const SettingsScreen: React.FC<{ navigation: SettingsScreenNavigationProp }> = (
   const dataStats = getDataStats();
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
+      {/* 自定义标题栏 */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>设置</Text>
+      </View>
+
+      <ScrollView style={styles.scrollView}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>⚙️ 配置管理</Text>
         
@@ -137,6 +144,7 @@ const SettingsScreen: React.FC<{ navigation: SettingsScreenNavigationProp }> = (
         </View>
       </View>
     </ScrollView>
+    </View>
   );
 };
 
@@ -144,6 +152,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  header: {
+    backgroundColor: '#f5f5f5',
+    paddingTop: Platform.OS === 'ios' ? 50 : 20, // 适配状态栏
+    paddingBottom: 15,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+  },
+  scrollView: {
+    flex: 1,
     padding: 20,
   },
   section: {

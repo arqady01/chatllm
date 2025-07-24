@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Alert,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../contexts/AppContext';
@@ -69,7 +70,20 @@ const DataManagementScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
   const stats = getDataStats();
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
+      {/* 自定义标题栏 */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="chevron-back" size={24} color="#333" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>数据管理</Text>
+        <View style={styles.headerRight} />
+      </View>
+
+      <ScrollView style={styles.scrollView}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>📊 数据统计</Text>
         
@@ -166,6 +180,7 @@ const DataManagementScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
         </View>
       </View>
     </ScrollView>
+    </View>
   );
 };
 
@@ -173,6 +188,35 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  header: {
+    backgroundColor: '#f5f5f5',
+    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingBottom: 15,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+  },
+  headerRight: {
+    width: 40,
+  },
+  scrollView: {
+    flex: 1,
     padding: 20,
   },
   section: {
