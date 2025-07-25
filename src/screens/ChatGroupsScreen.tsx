@@ -148,7 +148,10 @@ const ChatGroupsScreen: React.FC<ChatGroupsScreenProps> = ({ navigation }) => {
       
       {/* 标题栏 */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>聊天组</Text>
+        <View style={styles.headerLeft} />
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>MelonWise</Text>
+        </View>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => setShowCreateModal(true)}
@@ -238,12 +241,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  headerLeft: {
+    width: 40, // 与addButton相同宽度，用于平衡布局
+  },
+  headerTitleContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
-    flex: 1,
-    textAlign: 'center',
   },
   addButton: {
     width: 40,
@@ -252,6 +266,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 20,
     backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    zIndex: 2,
   },
   groupsList: {
     flex: 1,
