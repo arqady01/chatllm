@@ -3,7 +3,9 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
-  image?: string; // 图片URI
+  image?: string; // 图片URI，用于显示
+  imageBase64?: string; // 图片base64，用于API
+  imageMimeType?: string; // 图片MIME类型
   excludeFromContext?: boolean; // 是否从上下文中排除
   groupId?: string; // 所属聊天组ID
 }

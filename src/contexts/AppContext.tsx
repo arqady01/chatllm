@@ -17,7 +17,7 @@ type AppAction =
   | { type: 'SET_CURRENT_GROUP'; payload: string | null };
 
 interface AppContextType extends AppState {
-  sendMessage: (content: string, image?: string, groupId?: string) => Promise<void>;
+  sendMessage: (content: string, imageUri?: string, imageBase64?: string, imageMimeType?: string, groupId?: string) => Promise<void>;
   updateConfig: (config: ChatConfig) => Promise<void>;
   clearMessages: () => Promise<void>;
   clearContext: () => void;
@@ -119,15 +119,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const sendMessage = async (content: string, image?: string, groupId?: string) => {
-    if (!content.trim() && !image) return;
+  const sendMessage = async (content: string, imageUri?: string, imageBase64?: string, imageMimeType?: string, groupId?: string) => {
+    if (!content.trim() && !imageBase64) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
       content: content.trim(),
       timestamp: Date.now(),
-      image,
+      image: imageUri, // 保存URI用于显示
+      imageBase64: imageBase64, // 保存base64用于API
+      imageMimeType: imageMimeType || 'image/jpeg', // 保存MIME类型
       groupId: groupId || state.currentGroupId || undefined,
     };
 
@@ -140,17 +142,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const contextMessages = [...state.messages, userMessage].filter(msg => !msg.excludeFromContext);
 
       const messages = contextMessages.map(msg => {
-        if (msg.image) {
-          // 多模态消息 - 清理和验证base64数据
-          let cleanBase64 = msg.image;
-
-          // 如果已经是data URL格式，提取base64部分
-          if (cleanBase64.startsWith('data:')) {
-            const base64Index = cleanBase64.indexOf('base64,');
-            if (base64Index !== -1) {
-              cleanBase64 = cleanBase64.substring(base64Index + 7);
-            }
-          }
+        if (msg.imageBase64) {
+          // 多模态消息 - 使用保存的base64数据
+          let cleanBase64 = msg.imageBase64;
 
           // 清理base64字符串，移除可能的换行符和空格
           cleanBase64 = cleanBase64.replace(/[\r\n\s]/g, '');
@@ -166,7 +160,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             };
           }
 
-          const imageDataUrl = `data:image/jpeg;base64,${cleanBase64}`;
+          const mimeType = msg.imageMimeType || 'image/jpeg';
+          const imageDataUrl = `data:${mimeType};base64,${cleanBase64}`;
 
           return {
             role: msg.role,
@@ -205,6 +200,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const updatedMessages = [...state.messages, userMessage, assistantMessage];
       await StorageService.saveMessages(updatedMessages);
     } catch (error) {
+      console.error('Send message error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       dispatch({ type: 'SET_ERROR', payload: errorMessage });
     } finally {

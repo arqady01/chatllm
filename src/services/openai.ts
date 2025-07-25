@@ -25,7 +25,7 @@ export class OpenAIService {
     return baseUrl + endpoint;
   }
 
-  async sendMessage(messages: { role: string; content: string }[]): Promise<string> {
+  async sendMessage(messages: { role: string; content: string | any[] }[]): Promise<string> {
     if (!this.config.apiKey) {
       throw new Error('API Key is required');
     }

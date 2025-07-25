@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useApp } from '../contexts/AppContext';
@@ -37,6 +38,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
   const [inputText, setInputText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedImageBase64, setSelectedImageBase64] = useState<string | null>(null);
+  const [selectedImageMimeType, setSelectedImageMimeType] = useState<string>('image/jpeg');
   const [showImagePreview, setShowImagePreview] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
@@ -50,6 +52,45 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
       }, 100);
     }
   }, [groupMessages]);
+
+  // 将图片转换为base64 - 参考Python代码逻辑，并添加大小限制
+  const encodeImageToBase64 = async (uri: string): Promise<{ base64: string; mimeType: string }> => {
+    try {
+      console.log('Converting image to base64:', uri);
+
+      // 直接读取图片文件并转换为base64，类似Python的做法
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      // 检查文件大小（限制为5MB）
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (blob.size > maxSize) {
+        console.warn(`Image size ${blob.size} bytes exceeds limit ${maxSize} bytes`);
+        Alert.alert('图片过大', '图片大小不能超过5MB，请选择较小的图片');
+        return { base64: '', mimeType: '' };
+      }
+
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // 提取MIME类型和base64数据
+          const [header, base64Data] = result.split(',');
+          const mimeType = header.match(/data:([^;]+)/)?.[1] || 'image/jpeg';
+
+          console.log(`Base64 size: ${base64Data.length} bytes`);
+          console.log(`MIME type: ${mimeType}`);
+
+          resolve({ base64: base64Data, mimeType });
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Error encoding image to base64:', error);
+      return { base64: '', mimeType: '' };
+    }
+  };
 
   // 请求图片权限
   const requestImagePermission = async () => {
@@ -72,10 +113,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
       console.log('Launching image picker...');
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.7, // 降低质量以减少base64大小
-        base64: true,
+        allowsEditing: false, // 不显示裁剪框
+        quality: 0.8, // 适中的质量，避免文件过大
+        base64: false, // 不需要base64，后续手动转换
         exif: false, // 不包含EXIF数据
       });
 
@@ -83,9 +123,15 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
         console.log('Selected image asset:', asset.uri);
-        setSelectedImage(asset.uri); // 用于预览显示
-        setSelectedImageBase64(asset.base64 || null); // 用于发送给API
-        setShowImagePreview(true);
+
+        // 转换为base64
+        const { base64, mimeType } = await encodeImageToBase64(asset.uri);
+        if (base64) {
+          setSelectedImage(asset.uri);
+          setSelectedImageBase64(base64);
+          setSelectedImageMimeType(mimeType);
+          setShowImagePreview(true);
+        }
       }
     } catch (error) {
       console.error('Error in pickImage:', error);
@@ -103,18 +149,23 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
 
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.7, // 降低质量以减少base64大小
-      base64: true,
+      allowsEditing: false, // 不显示裁剪框
+      quality: 0.8, // 适中的质量，避免文件过大
+      base64: false, // 不需要base64，后续手动转换
       exif: false, // 不包含EXIF数据
     });
 
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
-      setSelectedImage(asset.uri); // 用于预览显示
-      setSelectedImageBase64(asset.base64 || null); // 用于发送给API
-      setShowImagePreview(true);
+
+      // 转换为base64
+      const { base64, mimeType } = await encodeImageToBase64(asset.uri);
+      if (base64) {
+        setSelectedImage(asset.uri);
+        setSelectedImageBase64(base64);
+        setSelectedImageMimeType(mimeType);
+        setShowImagePreview(true);
+      }
     }
   };
 
@@ -147,22 +198,26 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
     }
 
     const message = inputText.trim();
-    const imageBase64 = selectedImageBase64;
+    const imageUri = selectedImage; // 用于显示的URI
+    const imageBase64 = selectedImageBase64; // 用于API的base64
+    const imageMimeType = selectedImageMimeType; // 图片MIME类型
 
     // 清空输入
     setInputText('');
     setSelectedImage(null);
     setSelectedImageBase64(null);
+    setSelectedImageMimeType('image/jpeg');
     setShowImagePreview(false);
 
-    // 发送消息（包含图片base64数据）
-    await sendMessage(message, imageBase64, groupId);
+    // 发送消息（传递URI用于显示，base64用于API，MIME类型）
+    await sendMessage(message, imageUri, imageBase64, imageMimeType, groupId);
   };
 
   // 移除选中的图片
   const removeSelectedImage = () => {
     setSelectedImage(null);
     setSelectedImageBase64(null);
+    setSelectedImageMimeType('image/jpeg');
     setShowImagePreview(false);
   };
 
