@@ -71,7 +71,7 @@ const SettingsScreen: React.FC<{ navigation: SettingsScreenNavigationProp }> = (
 
       <ScrollView style={styles.scrollView}>
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>⚙️ 配置管理</Text>
+        <Text style={styles.sectionTitle}>配置管理</Text>
         
         <TouchableOpacity
           style={styles.menuItem}
@@ -99,7 +99,7 @@ const SettingsScreen: React.FC<{ navigation: SettingsScreenNavigationProp }> = (
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🗂️ 数据管理</Text>
+        <Text style={styles.sectionTitle}>数据管理</Text>
         
         <TouchableOpacity
           style={styles.menuItem}
