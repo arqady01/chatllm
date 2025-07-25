@@ -2,6 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import ChatGroupsScreen from '../screens/ChatGroupsScreen';
 import ChatScreen from '../screens/ChatScreen';
@@ -107,6 +108,14 @@ const AppNavigator: React.FC = () => {
           tabBarActiveTintColor: '#000000',
           tabBarInactiveTintColor: 'gray',
           headerShown: false, // 隐藏Tab导航的header，使用Stack导航的header
+          // 根据当前路由动态隐藏Tab栏
+          tabBarStyle: ((route) => {
+            const routeName = getFocusedRouteNameFromRoute(route) ?? '';
+            if (routeName === 'Chat') {
+              return { display: 'none' };
+            }
+            return {};
+          })(route),
         })}
       >
         <Tab.Screen
