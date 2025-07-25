@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { Message } from '../types';
 
 interface MessageBubbleProps {
@@ -20,9 +20,22 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
   return (
     <View style={[styles.container, isUser ? styles.userContainer : styles.assistantContainer]}>
       <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
-        <Text style={[styles.text, isUser ? styles.userText : styles.assistantText]}>
-          {message.content}
-        </Text>
+        {/* 显示图片 */}
+        {message.image && (
+          <Image
+            source={{ uri: message.image }}
+            style={styles.messageImage}
+            resizeMode="cover"
+          />
+        )}
+
+        {/* 显示文本内容 */}
+        {message.content && (
+          <Text style={[styles.text, isUser ? styles.userText : styles.assistantText]}>
+            {message.content}
+          </Text>
+        )}
+
         <Text style={[styles.timestamp, isUser ? styles.userTimestamp : styles.assistantTimestamp]}>
           {formatTime(message.timestamp)}
         </Text>
@@ -59,6 +72,12 @@ const styles = StyleSheet.create({
   assistantBubble: {
     backgroundColor: '#E5E5EA',
     borderBottomLeftRadius: 4,
+  },
+  messageImage: {
+    width: 200,
+    height: 150,
+    borderRadius: 12,
+    marginBottom: 8,
   },
   text: {
     fontSize: 16,

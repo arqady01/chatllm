@@ -3,12 +3,18 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
+import ChatGroupsScreen from '../screens/ChatGroupsScreen';
 import ChatScreen from '../screens/ChatScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import ApiConfigScreen from '../screens/ApiConfigScreen';
 import DataManagementScreen from '../screens/DataManagementScreen';
 
 // 定义导航参数类型
+export type ChatStackParamList = {
+  ChatGroups: undefined;
+  Chat: { groupId: string; groupName: string };
+};
+
 export type SettingsStackParamList = {
   SettingsMain: undefined;
   ApiConfig: undefined;
@@ -16,39 +22,67 @@ export type SettingsStackParamList = {
 };
 
 const Tab = createBottomTabNavigator();
-const Stack = createStackNavigator<SettingsStackParamList>();
+const ChatStack = createStackNavigator<ChatStackParamList>();
+const SettingsStack = createStackNavigator<SettingsStackParamList>();
+
+// 聊天页面的堆栈导航
+const ChatStackNavigator: React.FC = () => {
+  return (
+    <ChatStack.Navigator
+      initialRouteName="ChatGroups"
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <ChatStack.Screen
+        name="ChatGroups"
+        component={ChatGroupsScreen}
+        options={{
+          headerShown: false
+        }}
+      />
+      <ChatStack.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={{
+          headerShown: false
+        }}
+      />
+    </ChatStack.Navigator>
+  );
+};
 
 // 设置页面的堆栈导航
-const SettingsStack: React.FC = () => {
+const SettingsStackNavigator: React.FC = () => {
   return (
-    <Stack.Navigator
+    <SettingsStack.Navigator
       initialRouteName="SettingsMain"
       screenOptions={{
         headerShown: false, // 隐藏所有header
       }}
     >
-      <Stack.Screen
+      <SettingsStack.Screen
         name="SettingsMain"
         component={SettingsScreen}
         options={{
           headerShown: false
         }}
       />
-      <Stack.Screen
+      <SettingsStack.Screen
         name="ApiConfig"
         component={ApiConfigScreen}
         options={{
           headerShown: false
         }}
       />
-      <Stack.Screen
+      <SettingsStack.Screen
         name="DataManagement"
         component={DataManagementScreen}
         options={{
           headerShown: false
         }}
       />
-    </Stack.Navigator>
+    </SettingsStack.Navigator>
   );
 };
 
@@ -60,7 +94,7 @@ const AppNavigator: React.FC = () => {
           tabBarIcon: ({ focused, color, size }) => {
             let iconName: keyof typeof Ionicons.glyphMap;
 
-            if (route.name === 'Chat') {
+            if (route.name === 'ChatTab') {
               iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
             } else if (route.name === 'Settings') {
               iconName = focused ? 'settings' : 'settings-outline';
@@ -76,16 +110,16 @@ const AppNavigator: React.FC = () => {
         })}
       >
         <Tab.Screen
-          name="Chat"
-          component={ChatScreen}
+          name="ChatTab"
+          component={ChatStackNavigator}
           options={{
             title: '聊天',
-            headerShown: false, // 移除聊天页面的header
+            headerShown: false,
           }}
         />
         <Tab.Screen
           name="Settings"
-          component={SettingsStack}
+          component={SettingsStackNavigator}
           options={{
             title: '设置',
           }}

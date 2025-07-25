@@ -11,24 +11,126 @@ import {
   Alert,
   ActivityIndicator,
   StatusBar,
+  Image,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { RouteProp } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { useApp } from '../contexts/AppContext';
 import MessageBubble from '../components/MessageBubble';
 import { Message } from '../types';
+import { ChatStackParamList } from '../navigation/AppNavigator';
 
-const ChatScreen: React.FC = () => {
-  const { messages, isLoading, error, sendMessage, config } = useApp();
+type ChatScreenRouteProp = RouteProp<ChatStackParamList, 'Chat'>;
+type ChatScreenNavigationProp = StackNavigationProp<ChatStackParamList, 'Chat'>;
+
+interface ChatScreenProps {
+  route: ChatScreenRouteProp;
+  navigation: ChatScreenNavigationProp;
+}
+
+const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
+  const { groupId, groupName } = route.params;
+  const { messages, isLoading, error, sendMessage, config, clearContext, getGroupMessages } = useApp();
   const [inputText, setInputText] = useState('');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImageBase64, setSelectedImageBase64] = useState<string | null>(null);
+  const [showImagePreview, setShowImagePreview] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
+  // 获取当前组的消息
+  const groupMessages = getGroupMessages(groupId);
+
   useEffect(() => {
-    if (messages.length > 0) {
+    if (groupMessages.length > 0) {
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
-  }, [messages]);
+  }, [groupMessages]);
+
+  // 请求图片权限
+  const requestImagePermission = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('权限需要', '需要访问相册权限才能选择图片');
+      return false;
+    }
+    return true;
+  };
+
+  // 选择图片
+  const pickImage = async () => {
+    console.log('pickImage called');
+    try {
+      const hasPermission = await requestImagePermission();
+      console.log('Permission result:', hasPermission);
+      if (!hasPermission) return;
+
+      console.log('Launching image picker...');
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7, // 降低质量以减少base64大小
+        base64: true,
+        exif: false, // 不包含EXIF数据
+      });
+
+      console.log('Image picker result:', result);
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        console.log('Selected image asset:', asset.uri);
+        setSelectedImage(asset.uri); // 用于预览显示
+        setSelectedImageBase64(asset.base64 || null); // 用于发送给API
+        setShowImagePreview(true);
+      }
+    } catch (error) {
+      console.error('Error in pickImage:', error);
+      Alert.alert('错误', '选择图片时出现错误');
+    }
+  };
+
+  // 拍照
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('权限需要', '需要访问相机权限才能拍照');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7, // 降低质量以减少base64大小
+      base64: true,
+      exif: false, // 不包含EXIF数据
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      setSelectedImage(asset.uri); // 用于预览显示
+      setSelectedImageBase64(asset.base64 || null); // 用于发送给API
+      setShowImagePreview(true);
+    }
+  };
+
+  // 显示图片选择选项
+  const showImageOptions = () => {
+    console.log('showImageOptions called');
+    Alert.alert(
+      '选择图片',
+      '请选择图片来源',
+      [
+        { text: '取消', style: 'cancel' },
+        { text: '相册', onPress: pickImage },
+        { text: '拍照', onPress: takePhoto },
+      ]
+    );
+  };
 
   useEffect(() => {
     if (error) {
@@ -37,7 +139,7 @@ const ChatScreen: React.FC = () => {
   }, [error]);
 
   const handleSend = async () => {
-    if (!inputText.trim()) return;
+    if (!inputText.trim() && !selectedImageBase64) return;
 
     if (!config.apiKey) {
       Alert.alert('配置错误', '请先在设置页面配置API Key');
@@ -45,8 +147,23 @@ const ChatScreen: React.FC = () => {
     }
 
     const message = inputText.trim();
+    const imageBase64 = selectedImageBase64;
+
+    // 清空输入
     setInputText('');
-    await sendMessage(message);
+    setSelectedImage(null);
+    setSelectedImageBase64(null);
+    setShowImagePreview(false);
+
+    // 发送消息（包含图片base64数据）
+    await sendMessage(message, imageBase64, groupId);
+  };
+
+  // 移除选中的图片
+  const removeSelectedImage = () => {
+    setSelectedImage(null);
+    setSelectedImageBase64(null);
+    setShowImagePreview(false);
   };
 
   const renderMessage = ({ item }: { item: Message }) => (
@@ -85,19 +202,44 @@ const ChatScreen: React.FC = () => {
 
       {/* 自定义标题栏 */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>MelonWise</Text>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="chevron-back" size={24} color="#007AFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{groupName}</Text>
+        <TouchableOpacity
+          style={styles.clearContextButton}
+          onPress={() => {
+            Alert.alert(
+              '清除上下文',
+              '这将清除对话上下文，但保留聊天记录显示。AI将不再记住之前的对话内容。',
+              [
+                { text: '取消', style: 'cancel' },
+                {
+                  text: '确认',
+                  style: 'destructive',
+                  onPress: clearContext
+                },
+              ]
+            );
+          }}
+        >
+          <Ionicons name="refresh-outline" size={24} color="#007AFF" />
+        </TouchableOpacity>
       </View>
       <FlatList
         ref={flatListRef}
-        data={messages}
+        data={groupMessages}
         renderItem={renderMessage}
         keyExtractor={(item) => item.id}
         style={styles.messagesList}
-        contentContainerStyle={messages.length === 0 ? styles.emptyContainer : undefined}
+        contentContainerStyle={groupMessages.length === 0 ? styles.emptyContainer : undefined}
         ListEmptyComponent={renderEmptyState}
         showsVerticalScrollIndicator={false}
         onContentSizeChange={() => {
-          if (messages.length > 0) {
+          if (groupMessages.length > 0) {
             flatListRef.current?.scrollToEnd({ animated: true });
           }
         }}
@@ -105,7 +247,34 @@ const ChatScreen: React.FC = () => {
       
       {renderLoadingIndicator()}
 
+      {/* 图片预览 */}
+      {selectedImage && (
+        <View style={styles.imagePreviewContainer}>
+          <View style={styles.imagePreview}>
+            <Image source={{ uri: selectedImage }} style={styles.previewImage} />
+            <TouchableOpacity
+              style={styles.removeImageButton}
+              onPress={removeSelectedImage}
+            >
+              <Ionicons name="close-circle" size={24} color="#FF3B30" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       <View style={styles.inputContainer}>
+        <TouchableOpacity
+          style={styles.imageButton}
+          onPress={showImageOptions}
+          disabled={isLoading}
+        >
+          <Ionicons
+            name="image-outline"
+            size={24}
+            color={isLoading ? '#ccc' : '#007AFF'}
+          />
+        </TouchableOpacity>
+
         <TextInput
           style={styles.textInput}
           value={inputText}
@@ -117,18 +286,19 @@ const ChatScreen: React.FC = () => {
           onSubmitEditing={handleSend}
           blurOnSubmit={false}
         />
+
         <TouchableOpacity
           style={[
             styles.sendButton,
-            (!inputText.trim() || isLoading) && styles.sendButtonDisabled
+            ((!inputText.trim() && !selectedImageBase64) || isLoading) && styles.sendButtonDisabled
           ]}
           onPress={handleSend}
-          disabled={!inputText.trim() || isLoading}
+          disabled={(!inputText.trim() && !selectedImageBase64) || isLoading}
         >
-          <Ionicons 
-            name="send" 
-            size={20} 
-            color={(!inputText.trim() || isLoading) ? '#ccc' : 'white'} 
+          <Ionicons
+            name="send"
+            size={20}
+            color={((!inputText.trim() && !selectedImageBase64) || isLoading) ? '#ccc' : 'white'}
           />
         </TouchableOpacity>
       </View>
@@ -148,12 +318,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
+    flex: 1,
     textAlign: 'center',
+  },
+  clearContextButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
   },
   messagesList: {
     flex: 1,
@@ -192,6 +382,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  imagePreviewContainer: {
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  imagePreview: {
+    position: 'relative',
+    alignSelf: 'flex-start',
+  },
+  previewImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: 'white',
+    borderRadius: 12,
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -200,6 +414,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
+  },
+  imageButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+    borderRadius: 20,
+    backgroundColor: '#f8f8f8',
   },
   textInput: {
     flex: 1,

@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { Message, ChatConfig, AppState, ModelInfo } from '../types';
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { Message, ChatConfig, AppState, ModelInfo, ChatGroup } from '../types';
 import { OpenAIService } from '../services/openai';
 import { StorageService } from '../services/storage';
 
@@ -9,12 +9,22 @@ type AppAction =
   | { type: 'SET_MESSAGES'; payload: Message[] }
   | { type: 'ADD_MESSAGE'; payload: Message }
   | { type: 'SET_CONFIG'; payload: ChatConfig }
-  | { type: 'CLEAR_MESSAGES' };
+  | { type: 'CLEAR_MESSAGES' }
+  | { type: 'CLEAR_CONTEXT' }
+  | { type: 'SET_CHAT_GROUPS'; payload: ChatGroup[] }
+  | { type: 'ADD_CHAT_GROUP'; payload: ChatGroup }
+  | { type: 'DELETE_CHAT_GROUP'; payload: string }
+  | { type: 'SET_CURRENT_GROUP'; payload: string | null };
 
 interface AppContextType extends AppState {
-  sendMessage: (content: string) => Promise<void>;
+  sendMessage: (content: string, image?: string, groupId?: string) => Promise<void>;
   updateConfig: (config: ChatConfig) => Promise<void>;
   clearMessages: () => Promise<void>;
+  clearContext: () => void;
+  createChatGroup: (name: string, description?: string) => Promise<void>;
+  deleteChatGroup: (groupId: string) => Promise<void>;
+  setCurrentGroup: (groupId: string | null) => void;
+  getGroupMessages: (groupId: string) => Message[];
   testConnection: () => Promise<boolean>;
   getAvailableModels: () => Promise<ModelInfo[]>;
   detectBaseUrl: (inputUrl: string, apiKey: string) => Promise<{ baseUrl: string; isValid: boolean; detectedEndpoints: string[]; errorDetails?: string; isForceMode?: boolean }>;
@@ -22,6 +32,8 @@ interface AppContextType extends AppState {
 
 const initialState: AppState = {
   messages: [],
+  chatGroups: [],
+  currentGroupId: null,
   config: {
     apiKey: '',
     baseUrl: 'https://api.openai.com/v1',
@@ -45,6 +57,25 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
       return { ...state, config: action.payload };
     case 'CLEAR_MESSAGES':
       return { ...state, messages: [] };
+    case 'CLEAR_CONTEXT':
+      // 清除上下文：将所有消息标记为不参与上下文，但保留显示
+      return {
+        ...state,
+        messages: state.messages.map(msg => ({ ...msg, excludeFromContext: true }))
+      };
+    case 'SET_CHAT_GROUPS':
+      return { ...state, chatGroups: action.payload };
+    case 'ADD_CHAT_GROUP':
+      return { ...state, chatGroups: [...state.chatGroups, action.payload] };
+    case 'DELETE_CHAT_GROUP':
+      return {
+        ...state,
+        chatGroups: state.chatGroups.filter(group => group.id !== action.payload),
+        messages: state.messages.filter(msg => msg.groupId !== action.payload),
+        currentGroupId: state.currentGroupId === action.payload ? null : state.currentGroupId
+      };
+    case 'SET_CURRENT_GROUP':
+      return { ...state, currentGroupId: action.payload };
     default:
       return state;
   }
@@ -52,7 +83,7 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
   const openAIService = new OpenAIService(state.config);
 
@@ -66,9 +97,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const loadInitialData = async () => {
     try {
-      const [savedMessages, savedConfig] = await Promise.all([
+      const [savedMessages, savedConfig, savedChatGroups] = await Promise.all([
         StorageService.loadMessages(),
         StorageService.loadConfig(),
+        StorageService.loadChatGroups(),
       ]);
 
       if (savedMessages.length > 0) {
@@ -78,19 +110,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (savedConfig) {
         dispatch({ type: 'SET_CONFIG', payload: savedConfig });
       }
+
+      if (savedChatGroups.length > 0) {
+        dispatch({ type: 'SET_CHAT_GROUPS', payload: savedChatGroups });
+      }
     } catch (error) {
       console.error('Error loading initial data:', error);
     }
   };
 
-  const sendMessage = async (content: string) => {
-    if (!content.trim()) return;
+  const sendMessage = async (content: string, image?: string, groupId?: string) => {
+    if (!content.trim() && !image) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
       content: content.trim(),
       timestamp: Date.now(),
+      image,
+      groupId: groupId || state.currentGroupId || undefined,
     };
 
     dispatch({ type: 'ADD_MESSAGE', payload: userMessage });
@@ -98,10 +136,58 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     dispatch({ type: 'SET_ERROR', payload: null });
 
     try {
-      const messages = [...state.messages, userMessage].map(msg => ({
-        role: msg.role,
-        content: msg.content,
-      }));
+      // 只包含未被排除的消息作为上下文
+      const contextMessages = [...state.messages, userMessage].filter(msg => !msg.excludeFromContext);
+
+      const messages = contextMessages.map(msg => {
+        if (msg.image) {
+          // 多模态消息 - 清理和验证base64数据
+          let cleanBase64 = msg.image;
+
+          // 如果已经是data URL格式，提取base64部分
+          if (cleanBase64.startsWith('data:')) {
+            const base64Index = cleanBase64.indexOf('base64,');
+            if (base64Index !== -1) {
+              cleanBase64 = cleanBase64.substring(base64Index + 7);
+            }
+          }
+
+          // 清理base64字符串，移除可能的换行符和空格
+          cleanBase64 = cleanBase64.replace(/[\r\n\s]/g, '');
+
+          // 验证base64格式
+          const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+          if (!base64Regex.test(cleanBase64)) {
+            console.error('Invalid base64 format');
+            // 如果base64无效，只发送文本
+            return {
+              role: msg.role,
+              content: msg.content || '图片格式错误，无法发送',
+            };
+          }
+
+          const imageDataUrl = `data:image/jpeg;base64,${cleanBase64}`;
+
+          return {
+            role: msg.role,
+            content: [
+              ...(msg.content ? [{ type: 'text' as const, text: msg.content }] : []),
+              {
+                type: 'image_url' as const,
+                image_url: {
+                  url: imageDataUrl,
+                },
+              },
+            ],
+          };
+        } else {
+          // 纯文本消息
+          return {
+            role: msg.role,
+            content: msg.content,
+          };
+        }
+      });
 
       const response = await openAIService.sendMessage(messages);
 
@@ -110,10 +196,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         role: 'assistant',
         content: response,
         timestamp: Date.now(),
+        groupId: userMessage.groupId,
       };
 
       dispatch({ type: 'ADD_MESSAGE', payload: assistantMessage });
-      
+
       // Save messages to storage
       const updatedMessages = [...state.messages, userMessage, assistantMessage];
       await StorageService.saveMessages(updatedMessages);
@@ -133,6 +220,45 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const clearMessages = async () => {
     dispatch({ type: 'CLEAR_MESSAGES' });
     await StorageService.saveMessages([]);
+  };
+
+  const clearContext = () => {
+    dispatch({ type: 'CLEAR_CONTEXT' });
+  };
+
+  const createChatGroup = async (name: string, description?: string) => {
+    const newGroup: ChatGroup = {
+      id: Date.now().toString(),
+      name,
+      description,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      messageCount: 0,
+    };
+
+    dispatch({ type: 'ADD_CHAT_GROUP', payload: newGroup });
+
+    // 保存到存储
+    const updatedGroups = [...state.chatGroups, newGroup];
+    await StorageService.saveChatGroups(updatedGroups);
+  };
+
+  const deleteChatGroup = async (groupId: string) => {
+    dispatch({ type: 'DELETE_CHAT_GROUP', payload: groupId });
+
+    // 保存到存储
+    const updatedGroups = state.chatGroups.filter(group => group.id !== groupId);
+    const updatedMessages = state.messages.filter(msg => msg.groupId !== groupId);
+    await StorageService.saveChatGroups(updatedGroups);
+    await StorageService.saveMessages(updatedMessages);
+  };
+
+  const setCurrentGroup = (groupId: string | null) => {
+    dispatch({ type: 'SET_CURRENT_GROUP', payload: groupId });
+  };
+
+  const getGroupMessages = (groupId: string): Message[] => {
+    return state.messages.filter(msg => msg.groupId === groupId);
   };
 
   const testConnection = async (): Promise<boolean> => {
@@ -166,6 +292,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     sendMessage,
     updateConfig,
     clearMessages,
+    clearContext,
+    createChatGroup,
+    deleteChatGroup,
+    setCurrentGroup,
+    getGroupMessages,
     testConnection,
     getAvailableModels,
     detectBaseUrl,

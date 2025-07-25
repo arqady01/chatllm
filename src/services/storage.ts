@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Message, ChatConfig } from '../types';
+import { Message, ChatConfig, ChatGroup } from '../types';
 
 const STORAGE_KEYS = {
   MESSAGES: '@melonwise_messages',
   CONFIG: '@melonwise_config',
+  CHAT_GROUPS: '@melonwise_chat_groups',
 };
 
 export class StorageService {
@@ -43,9 +44,27 @@ export class StorageService {
     }
   }
 
+  static async saveChatGroups(groups: ChatGroup[]): Promise<void> {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.CHAT_GROUPS, JSON.stringify(groups));
+    } catch (error) {
+      console.error('Error saving chat groups:', error);
+    }
+  }
+
+  static async loadChatGroups(): Promise<ChatGroup[]> {
+    try {
+      const groupsJson = await AsyncStorage.getItem(STORAGE_KEYS.CHAT_GROUPS);
+      return groupsJson ? JSON.parse(groupsJson) : [];
+    } catch (error) {
+      console.error('Error loading chat groups:', error);
+      return [];
+    }
+  }
+
   static async clearAllData(): Promise<void> {
     try {
-      await AsyncStorage.multiRemove([STORAGE_KEYS.MESSAGES, STORAGE_KEYS.CONFIG]);
+      await AsyncStorage.multiRemove([STORAGE_KEYS.MESSAGES, STORAGE_KEYS.CONFIG, STORAGE_KEYS.CHAT_GROUPS]);
     } catch (error) {
       console.error('Error clearing data:', error);
     }
