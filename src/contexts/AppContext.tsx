@@ -3,6 +3,7 @@ import { Message, ChatConfig, AppState, ModelInfo, ChatGroup } from '../types';
 import { OpenAIService } from '../services/openai';
 import { StorageService } from '../services/storage';
 import { ContextManager } from '../utils/contextManager';
+import { ContextLimitTest } from '../utils/contextLimitTest';
 
 type AppAction =
   | { type: 'SET_LOADING'; payload: boolean }
@@ -17,6 +18,7 @@ type AppAction =
   | { type: 'CLEAR_GROUP_MESSAGES'; payload: string }
   | { type: 'SET_CHAT_GROUPS'; payload: ChatGroup[] }
   | { type: 'ADD_CHAT_GROUP'; payload: ChatGroup }
+  | { type: 'UPDATE_CHAT_GROUP'; payload: ChatGroup }
   | { type: 'DELETE_CHAT_GROUP'; payload: string }
   | { type: 'SET_CURRENT_GROUP'; payload: string | null };
 
@@ -27,10 +29,12 @@ interface AppContextType extends AppState {
   clearContext: (groupId?: string) => void;
   clearGroupMessages: (groupId: string) => Promise<void>;
   createChatGroup: (name: string, description?: string) => Promise<void>;
+  updateChatGroup: (group: ChatGroup) => Promise<void>;
   deleteChatGroup: (groupId: string) => Promise<void>;
   setCurrentGroup: (groupId: string | null) => void;
   getGroupMessages: (groupId: string) => Message[];
   getContextInfo: () => { contextLength: number; totalMessages: number };
+  testContextLimit: () => void;
   testConnection: () => Promise<boolean>;
   getAvailableModels: () => Promise<ModelInfo[]>;
   detectBaseUrl: (inputUrl: string, apiKey: string) => Promise<{ baseUrl: string; isValid: boolean; detectedEndpoints: string[]; errorDetails?: string; isForceMode?: boolean }>;
@@ -80,6 +84,13 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
       return { ...state, chatGroups: action.payload };
     case 'ADD_CHAT_GROUP':
       return { ...state, chatGroups: [...state.chatGroups, action.payload] };
+    case 'UPDATE_CHAT_GROUP':
+      return {
+        ...state,
+        chatGroups: state.chatGroups.map(group =>
+          group.id === action.payload.id ? action.payload : group
+        )
+      };
     case 'DELETE_CHAT_GROUP':
       return {
         ...state,
@@ -157,8 +168,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     dispatch({ type: 'SET_ERROR', payload: null });
 
     try {
+      // 获取当前聊天组的上下文限制
+      const currentGroup = state.chatGroups.find(g => g.id === (groupId || state.currentGroupId));
+      const contextLimit = currentGroup?.contextLimit;
+
       // 构建当前上下文（包括刚添加的用户消息）
-      const currentContextMessages = [...state.contextMessages, userMessage];
+      let currentContextMessages = [...state.contextMessages, userMessage];
+
+      // 应用上下文限制
+      if (contextLimit !== undefined && currentContextMessages.length > contextLimit) {
+        currentContextMessages = currentContextMessages.slice(-contextLimit);
+        console.log(`Applied context limit: ${contextLimit}, using last ${currentContextMessages.length} messages`);
+      }
 
       // 使用工具类构建发送给API的消息数组
       const messages = ContextManager.buildApiMessages(currentContextMessages);
@@ -251,6 +272,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await StorageService.saveChatGroups(updatedGroups);
   };
 
+  const updateChatGroup = async (group: ChatGroup) => {
+    dispatch({ type: 'UPDATE_CHAT_GROUP', payload: group });
+
+    // 保存到存储
+    const updatedGroups = state.chatGroups.map(g =>
+      g.id === group.id ? group : g
+    );
+    await StorageService.saveChatGroups(updatedGroups);
+  };
+
   const deleteChatGroup = async (groupId: string) => {
     dispatch({ type: 'DELETE_CHAT_GROUP', payload: groupId });
 
@@ -301,6 +332,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return stats;
   };
 
+  const testContextLimit = () => {
+    console.log('🧪 Testing context limit functionality...');
+    ContextLimitTest.runAllTests();
+  };
+
   const contextValue: AppContextType = {
     ...state,
     sendMessage,
@@ -309,10 +345,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     clearContext,
     clearGroupMessages,
     createChatGroup,
+    updateChatGroup,
     deleteChatGroup,
     setCurrentGroup,
     getGroupMessages,
     getContextInfo,
+    testContextLimit,
     testConnection,
     getAvailableModels,
     detectBaseUrl,

@@ -21,7 +21,8 @@ import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useApp } from '../contexts/AppContext';
 import MessageBubble from '../components/MessageBubble';
-import { Message } from '../types';
+import { ChatSettingsModal } from '../components/ChatSettingsModal';
+import { Message, ChatGroup } from '../types';
 import { ChatStackParamList } from '../navigation/AppNavigator';
 
 type ChatScreenRouteProp = RouteProp<ChatStackParamList, 'Chat'>;
@@ -34,16 +35,29 @@ interface ChatScreenProps {
 
 const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
   const { groupId, groupName } = route.params;
-  const { messages, isLoading, error, sendMessage, config, clearContext, clearGroupMessages, getGroupMessages } = useApp();
+  const {
+    messages,
+    isLoading,
+    error,
+    sendMessage,
+    config,
+    clearContext,
+    clearGroupMessages,
+    getGroupMessages,
+    chatGroups,
+    updateChatGroup
+  } = useApp();
   const [inputText, setInputText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedImageBase64, setSelectedImageBase64] = useState<string | null>(null);
   const [selectedImageMimeType, setSelectedImageMimeType] = useState<string>('image/jpeg');
   const [showImagePreview, setShowImagePreview] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
-  // 获取当前组的消息
+  // 获取当前组的消息和信息
   const groupMessages = getGroupMessages(groupId);
+  const currentGroup = chatGroups.find(g => g.id === groupId);
 
   useEffect(() => {
     if (groupMessages.length > 0) {
@@ -221,6 +235,15 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
     setShowImagePreview(false);
   };
 
+  // 处理聊天组更新
+  const handleUpdateGroup = async (updatedGroup: ChatGroup) => {
+    await updateChatGroup(updatedGroup);
+    // 如果名称发生了变化，更新导航标题
+    if (updatedGroup.name !== groupName) {
+      navigation.setParams({ groupName: updatedGroup.name });
+    }
+  };
+
   const renderMessage = ({ item }: { item: Message }) => (
     <MessageBubble message={item} />
   );
@@ -263,8 +286,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
         >
           <Ionicons name="chevron-back" size={14} color="#007AFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{groupName}</Text>
-        <View style={styles.headerRightSpace} />
+        <Text style={styles.headerTitle}>{currentGroup?.name || groupName}</Text>
+        <TouchableOpacity
+          style={styles.settingsButton}
+          onPress={() => setShowSettingsModal(true)}
+        >
+          <Ionicons name="settings-outline" size={20} color="#007AFF" />
+        </TouchableOpacity>
       </View>
       <FlatList
         ref={flatListRef}
@@ -396,6 +424,16 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
           />
         </TouchableOpacity>
       </View>
+
+      {/* 聊天设置模态框 */}
+      {currentGroup && (
+        <ChatSettingsModal
+          visible={showSettingsModal}
+          onClose={() => setShowSettingsModal(false)}
+          chatGroup={currentGroup}
+          onUpdateGroup={handleUpdateGroup}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 };
@@ -430,9 +468,13 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
-  headerRightSpace: {
+  settingsButton: {
     width: 32,
     height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+    backgroundColor: 'transparent',
   },
   messagesList: {
     flex: 1,

@@ -19,6 +19,7 @@ export interface ChatGroup {
   messageCount: number;
   lastMessage?: string;
   lastMessageTime?: number;
+  contextLimit?: number; // 上下文条数限制，undefined表示不限制
 }
 
 export interface ChatConfig {
