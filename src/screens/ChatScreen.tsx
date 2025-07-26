@@ -511,7 +511,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingHorizontal: 20,
-    paddingVertical: 8,
+    paddingTop: 8,
+    paddingBottom: 22,
     backgroundColor: 'white',
   },
   bottomButton: {
