@@ -34,7 +34,7 @@ interface ChatScreenProps {
 
 const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
   const { groupId, groupName } = route.params;
-  const { messages, isLoading, error, sendMessage, config, clearContext, getGroupMessages } = useApp();
+  const { messages, isLoading, error, sendMessage, config, clearContext, clearGroupMessages, getGroupMessages } = useApp();
   const [inputText, setInputText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedImageBase64, setSelectedImageBase64] = useState<string | null>(null);
@@ -337,12 +337,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
         >
           <Ionicons
             name="image-outline"
-            size={20}
+            size={24}
             color={isLoading ? '#ccc' : '#007AFF'}
           />
-          <Text style={[styles.bottomButtonText, isLoading && styles.bottomButtonTextDisabled]}>
-            上传图片
-          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -367,12 +364,36 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
         >
           <Ionicons
             name="refresh-outline"
-            size={20}
+            size={24}
             color={isLoading ? '#ccc' : '#007AFF'}
           />
-          <Text style={[styles.bottomButtonText, isLoading && styles.bottomButtonTextDisabled]}>
-            重置上下文
-          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.bottomButton}
+          onPress={() => {
+            Alert.alert(
+              '删除对话',
+              '确定要删除本聊天组中的所有对话吗？此操作不可恢复！',
+              [
+                { text: '取消', style: 'cancel' },
+                {
+                  text: '删除',
+                  style: 'destructive',
+                  onPress: () => {
+                    clearGroupMessages(groupId);
+                  }
+                },
+              ]
+            );
+          }}
+          disabled={isLoading}
+        >
+          <Ionicons
+            name="trash-outline"
+            size={24}
+            color={isLoading ? '#ccc' : '#FF3B30'}
+          />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -516,24 +537,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
   },
   bottomButton: {
-    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#f8f8f8',
-    minWidth: 120,
     justifyContent: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#f8f8f8',
   },
-  bottomButtonText: {
-    marginLeft: 6,
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-  bottomButtonTextDisabled: {
-    color: '#ccc',
-  },
+
 });
 
 export default ChatScreen;

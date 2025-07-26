@@ -11,6 +11,7 @@ type AppAction =
   | { type: 'SET_CONFIG'; payload: ChatConfig }
   | { type: 'CLEAR_MESSAGES' }
   | { type: 'CLEAR_CONTEXT' }
+  | { type: 'CLEAR_GROUP_MESSAGES'; payload: string }
   | { type: 'SET_CHAT_GROUPS'; payload: ChatGroup[] }
   | { type: 'ADD_CHAT_GROUP'; payload: ChatGroup }
   | { type: 'DELETE_CHAT_GROUP'; payload: string }
@@ -21,6 +22,7 @@ interface AppContextType extends AppState {
   updateConfig: (config: ChatConfig) => Promise<void>;
   clearMessages: () => Promise<void>;
   clearContext: (groupId?: string) => void;
+  clearGroupMessages: (groupId: string) => Promise<void>;
   createChatGroup: (name: string, description?: string) => Promise<void>;
   deleteChatGroup: (groupId: string) => Promise<void>;
   setCurrentGroup: (groupId: string | null) => void;
@@ -62,6 +64,12 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
       return {
         ...state,
         messages: state.messages.map(msg => ({ ...msg, excludeFromContext: true }))
+      };
+    case 'CLEAR_GROUP_MESSAGES':
+      // 删除指定聊天组的所有消息
+      return {
+        ...state,
+        messages: state.messages.filter(msg => msg.groupId !== action.payload)
       };
     case 'SET_CHAT_GROUPS':
       return { ...state, chatGroups: action.payload };
@@ -235,6 +243,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     dispatch({ type: 'ADD_MESSAGE', payload: separatorMessage });
   };
 
+  const clearGroupMessages = async (groupId: string) => {
+    // 删除指定聊天组的所有消息
+    dispatch({ type: 'CLEAR_GROUP_MESSAGES', payload: groupId });
+
+    // 保存到存储
+    const updatedMessages = state.messages.filter(msg => msg.groupId !== groupId);
+    await StorageService.saveMessages(updatedMessages);
+  };
+
   const createChatGroup = async (name: string, description?: string) => {
     const newGroup: ChatGroup = {
       id: Date.now().toString(),
@@ -302,6 +319,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateConfig,
     clearMessages,
     clearContext,
+    clearGroupMessages,
     createChatGroup,
     deleteChatGroup,
     setCurrentGroup,
