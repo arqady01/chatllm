@@ -6,7 +6,6 @@ export interface Message {
   image?: string; // 图片URI，用于显示
   imageBase64?: string; // 图片base64，用于API
   imageMimeType?: string; // 图片MIME类型
-  excludeFromContext?: boolean; // 是否从上下文中排除
   groupId?: string; // 所属聊天组ID
   isContextSeparator?: boolean; // 是否为上下文分隔符
 }
@@ -30,6 +29,7 @@ export interface ChatConfig {
 
 export interface AppState {
   messages: Message[];
+  contextMessages: Message[]; // 单独的上下文消息数组
   chatGroups: ChatGroup[];
   currentGroupId: string | null;
   config: ChatConfig;

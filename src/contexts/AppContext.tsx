@@ -2,6 +2,7 @@ import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { Message, ChatConfig, AppState, ModelInfo, ChatGroup } from '../types';
 import { OpenAIService } from '../services/openai';
 import { StorageService } from '../services/storage';
+import { ContextManager } from '../utils/contextManager';
 
 type AppAction =
   | { type: 'SET_LOADING'; payload: boolean }
@@ -10,6 +11,8 @@ type AppAction =
   | { type: 'ADD_MESSAGE'; payload: Message }
   | { type: 'SET_CONFIG'; payload: ChatConfig }
   | { type: 'CLEAR_MESSAGES' }
+  | { type: 'SET_CONTEXT_MESSAGES'; payload: Message[] }
+  | { type: 'ADD_TO_CONTEXT'; payload: Message }
   | { type: 'CLEAR_CONTEXT' }
   | { type: 'CLEAR_GROUP_MESSAGES'; payload: string }
   | { type: 'SET_CHAT_GROUPS'; payload: ChatGroup[] }
@@ -27,6 +30,7 @@ interface AppContextType extends AppState {
   deleteChatGroup: (groupId: string) => Promise<void>;
   setCurrentGroup: (groupId: string | null) => void;
   getGroupMessages: (groupId: string) => Message[];
+  getContextInfo: () => { contextLength: number; totalMessages: number };
   testConnection: () => Promise<boolean>;
   getAvailableModels: () => Promise<ModelInfo[]>;
   detectBaseUrl: (inputUrl: string, apiKey: string) => Promise<{ baseUrl: string; isValid: boolean; detectedEndpoints: string[]; errorDetails?: string; isForceMode?: boolean }>;
@@ -34,6 +38,7 @@ interface AppContextType extends AppState {
 
 const initialState: AppState = {
   messages: [],
+  contextMessages: [],
   chatGroups: [],
   currentGroupId: null,
   config: {
@@ -58,13 +63,13 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
     case 'SET_CONFIG':
       return { ...state, config: action.payload };
     case 'CLEAR_MESSAGES':
-      return { ...state, messages: [] };
+      return { ...state, messages: [], contextMessages: [] };
+    case 'SET_CONTEXT_MESSAGES':
+      return { ...state, contextMessages: action.payload };
+    case 'ADD_TO_CONTEXT':
+      return { ...state, contextMessages: [...state.contextMessages, action.payload] };
     case 'CLEAR_CONTEXT':
-      // 清除上下文：将所有消息标记为不参与上下文，但保留显示
-      return {
-        ...state,
-        messages: state.messages.map(msg => ({ ...msg, excludeFromContext: true }))
-      };
+      return { ...state, contextMessages: [] };
     case 'CLEAR_GROUP_MESSAGES':
       // 删除指定聊天组的所有消息
       return {
@@ -113,6 +118,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (savedMessages.length > 0) {
         dispatch({ type: 'SET_MESSAGES', payload: savedMessages });
+
+        // 使用工具类重建上下文
+        const contextMessages = ContextManager.rebuildContext(savedMessages);
+        dispatch({ type: 'SET_CONTEXT_MESSAGES', payload: contextMessages });
       }
 
       if (savedConfig) {
@@ -141,58 +150,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       groupId: groupId || state.currentGroupId || undefined,
     };
 
+    // 添加用户消息到显示和上下文
     dispatch({ type: 'ADD_MESSAGE', payload: userMessage });
+    dispatch({ type: 'ADD_TO_CONTEXT', payload: userMessage });
     dispatch({ type: 'SET_LOADING', payload: true });
     dispatch({ type: 'SET_ERROR', payload: null });
 
     try {
-      // 只包含未被排除的消息作为上下文
-      const contextMessages = [...state.messages, userMessage].filter(msg => !msg.excludeFromContext);
+      // 构建当前上下文（包括刚添加的用户消息）
+      const currentContextMessages = [...state.contextMessages, userMessage];
 
-      const messages = contextMessages.map(msg => {
-        if (msg.imageBase64) {
-          // 多模态消息 - 使用保存的base64数据
-          let cleanBase64 = msg.imageBase64;
+      // 使用工具类构建发送给API的消息数组
+      const messages = ContextManager.buildApiMessages(currentContextMessages);
 
-          // 清理base64字符串，移除可能的换行符和空格
-          cleanBase64 = cleanBase64.replace(/[\r\n\s]/g, '');
+      // 检查是否有有效的消息发送
+      if (messages.length === 0) {
+        throw new Error('没有有效的消息可以发送');
+      }
 
-          // 验证base64格式
-          const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
-          if (!base64Regex.test(cleanBase64)) {
-            console.error('Invalid base64 format');
-            // 如果base64无效，只发送文本
-            return {
-              role: msg.role,
-              content: msg.content || '图片格式错误，无法发送',
-            };
-          }
-
-          const mimeType = msg.imageMimeType || 'image/jpeg';
-          const imageDataUrl = `data:${mimeType};base64,${cleanBase64}`;
-
-          return {
-            role: msg.role,
-            content: [
-              ...(msg.content ? [{ type: 'text' as const, text: msg.content }] : []),
-              {
-                type: 'image_url' as const,
-                image_url: {
-                  url: imageDataUrl,
-                },
-              },
-            ],
-          };
-        } else {
-          // 纯文本消息
-          return {
-            role: msg.role,
-            content: msg.content,
-          };
-        }
-      });
-
+      console.log('Sending messages to API:', messages.length, 'messages');
       const response = await openAIService.sendMessage(messages);
+
+      if (!response || !response.trim()) {
+        throw new Error('API返回了空响应');
+      }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -202,7 +183,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         groupId: userMessage.groupId,
       };
 
+      // 添加助手消息到显示和上下文
       dispatch({ type: 'ADD_MESSAGE', payload: assistantMessage });
+      dispatch({ type: 'ADD_TO_CONTEXT', payload: assistantMessage });
 
       // Save messages to storage
       const updatedMessages = [...state.messages, userMessage, assistantMessage];
@@ -233,12 +216,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       role: 'system',
       content: '🔄 上下文已清除 🔄',
       timestamp: Date.now(),
-      excludeFromContext: true,
       isContextSeparator: true,
       groupId: groupId || state.currentGroupId || undefined,
     };
 
-    // 先清除上下文，再添加分隔符消息
+    // 清除上下文数组，添加分隔符消息到显示消息
     dispatch({ type: 'CLEAR_CONTEXT' });
     dispatch({ type: 'ADD_MESSAGE', payload: separatorMessage });
   };
@@ -313,6 +295,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const getContextInfo = () => {
+    const stats = ContextManager.getContextStats(state.contextMessages, state.messages);
+    console.log('Context info:', stats);
+    return stats;
+  };
+
   const contextValue: AppContextType = {
     ...state,
     sendMessage,
@@ -324,6 +312,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     deleteChatGroup,
     setCurrentGroup,
     getGroupMessages,
+    getContextInfo,
     testConnection,
     getAvailableModels,
     detectBaseUrl,

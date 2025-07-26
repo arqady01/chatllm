@@ -253,7 +253,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
       {/* 设置状态栏样式 */}
-      <StatusBar barStyle="dark-content" backgroundColor="#f5f5f5" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
 
       {/* 自定义标题栏 */}
       <View style={styles.header}>

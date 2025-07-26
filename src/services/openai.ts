@@ -34,6 +34,12 @@ export class OpenAIService {
       throw new Error('Base URL is required');
     }
 
+    if (!messages || messages.length === 0) {
+      throw new Error('Messages array is empty');
+    }
+
+    console.log('OpenAI Service: Sending request with', messages.length, 'messages');
+
     const requestBody: OpenAIRequest = {
       model: this.config.model || 'gpt-3.5-turbo',
       messages,

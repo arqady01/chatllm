@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useApp } from '../contexts/AppContext';
 import { ChatGroup } from '../types';
 
@@ -24,6 +25,26 @@ const ChatGroupsScreen: React.FC<ChatGroupsScreenProps> = ({ navigation }) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupDescription, setNewGroupDescription] = useState('');
+
+  // 设置StatusBar的函数
+  const setStatusBarForMainScreen = () => {
+    StatusBar.setBarStyle('dark-content', true);
+    if (Platform.OS === 'android') {
+      StatusBar.setBackgroundColor('#f5f5f5', true);
+    }
+  };
+
+  // 应用首次启动时立即设置StatusBar
+  useEffect(() => {
+    setStatusBarForMainScreen();
+  }, []);
+
+  // 从其他页面返回时动态设置StatusBar
+  useFocusEffect(
+    React.useCallback(() => {
+      setStatusBarForMainScreen();
+    }, [])
+  );
 
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) {
@@ -144,8 +165,6 @@ const ChatGroupsScreen: React.FC<ChatGroupsScreenProps> = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f5f5f5" />
-      
       {/* 标题栏 */}
       <View style={styles.header}>
         <View style={styles.headerLeft} />
