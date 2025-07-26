@@ -358,12 +358,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
                   style: 'destructive',
                   onPress: () => {
                     clearContext(groupId);
-                    // 显示成功提醒
-                    Alert.alert(
-                      '上下文已清除',
-                      'AI的对话记忆已重置，新的对话将不会参考之前的内容。',
-                      [{ text: '知道了', style: 'default' }]
-                    );
                   }
                 },
               ]
