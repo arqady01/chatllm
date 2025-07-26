@@ -264,25 +264,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
           <Ionicons name="chevron-back" size={24} color="#007AFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{groupName}</Text>
-        <TouchableOpacity
-          style={styles.clearContextButton}
-          onPress={() => {
-            Alert.alert(
-              '清除上下文',
-              '这将清除对话上下文，但保留聊天记录显示。AI将不再记住之前的对话内容。',
-              [
-                { text: '取消', style: 'cancel' },
-                {
-                  text: '确认',
-                  style: 'destructive',
-                  onPress: clearContext
-                },
-              ]
-            );
-          }}
-        >
-          <Ionicons name="refresh-outline" size={24} color="#007AFF" />
-        </TouchableOpacity>
+        <View style={styles.headerRightSpace} />
       </View>
       <FlatList
         ref={flatListRef}
@@ -318,18 +300,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
       )}
 
       <View style={styles.inputContainer}>
-        <TouchableOpacity
-          style={styles.imageButton}
-          onPress={showImageOptions}
-          disabled={isLoading}
-        >
-          <Ionicons
-            name="image-outline"
-            size={24}
-            color={isLoading ? '#ccc' : '#007AFF'}
-          />
-        </TouchableOpacity>
-
         <TextInput
           style={styles.textInput}
           value={inputText}
@@ -355,6 +325,60 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
             size={20}
             color={((!inputText.trim() && !selectedImageBase64) || isLoading) ? '#ccc' : 'white'}
           />
+        </TouchableOpacity>
+      </View>
+
+      {/* 底部按钮区域 */}
+      <View style={styles.bottomButtonsContainer}>
+        <TouchableOpacity
+          style={styles.bottomButton}
+          onPress={showImageOptions}
+          disabled={isLoading}
+        >
+          <Ionicons
+            name="image-outline"
+            size={20}
+            color={isLoading ? '#ccc' : '#007AFF'}
+          />
+          <Text style={[styles.bottomButtonText, isLoading && styles.bottomButtonTextDisabled]}>
+            上传图片
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.bottomButton}
+          onPress={() => {
+            Alert.alert(
+              '重置上下文',
+              '确定要重置对话上下文吗？这将清除AI的记忆，但保留聊天记录。',
+              [
+                { text: '取消', style: 'cancel' },
+                {
+                  text: '确认',
+                  style: 'destructive',
+                  onPress: () => {
+                    clearContext(groupId);
+                    // 显示成功提醒
+                    Alert.alert(
+                      '上下文已清除',
+                      'AI的对话记忆已重置，新的对话将不会参考之前的内容。',
+                      [{ text: '知道了', style: 'default' }]
+                    );
+                  }
+                },
+              ]
+            );
+          }}
+          disabled={isLoading}
+        >
+          <Ionicons
+            name="refresh-outline"
+            size={20}
+            color={isLoading ? '#ccc' : '#007AFF'}
+          />
+          <Text style={[styles.bottomButtonText, isLoading && styles.bottomButtonTextDisabled]}>
+            重置上下文
+          </Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -392,13 +416,9 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
-  clearContextButton: {
+  headerRightSpace: {
     width: 40,
     height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
   },
   messagesList: {
     flex: 1,
@@ -470,15 +490,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
   },
-  imageButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-    borderRadius: 20,
-    backgroundColor: '#f8f8f8',
-  },
   textInput: {
     flex: 1,
     borderWidth: 1,
@@ -489,6 +500,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     maxHeight: 100,
     backgroundColor: '#f8f8f8',
+    marginRight: 8,
   },
   sendButton: {
     backgroundColor: '#007AFF',
@@ -497,10 +509,35 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
   },
   sendButtonDisabled: {
     backgroundColor: '#f0f0f0',
+  },
+  bottomButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    backgroundColor: 'white',
+  },
+  bottomButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f8f8f8',
+    minWidth: 120,
+    justifyContent: 'center',
+  },
+  bottomButtonText: {
+    marginLeft: 6,
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  bottomButtonTextDisabled: {
+    color: '#ccc',
   },
 });
 

@@ -1,6 +1,6 @@
 export interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: number;
   image?: string; // 图片URI，用于显示
@@ -8,6 +8,7 @@ export interface Message {
   imageMimeType?: string; // 图片MIME类型
   excludeFromContext?: boolean; // 是否从上下文中排除
   groupId?: string; // 所属聊天组ID
+  isContextSeparator?: boolean; // 是否为上下文分隔符
 }
 
 export interface ChatGroup {

@@ -20,7 +20,7 @@ interface AppContextType extends AppState {
   sendMessage: (content: string, imageUri?: string, imageBase64?: string, imageMimeType?: string, groupId?: string) => Promise<void>;
   updateConfig: (config: ChatConfig) => Promise<void>;
   clearMessages: () => Promise<void>;
-  clearContext: () => void;
+  clearContext: (groupId?: string) => void;
   createChatGroup: (name: string, description?: string) => Promise<void>;
   deleteChatGroup: (groupId: string) => Promise<void>;
   setCurrentGroup: (groupId: string | null) => void;
@@ -218,8 +218,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await StorageService.saveMessages([]);
   };
 
-  const clearContext = () => {
+  const clearContext = (groupId?: string) => {
+    // 创建上下文分隔符消息
+    const separatorMessage: Message = {
+      id: Date.now().toString(),
+      role: 'system',
+      content: '🔄 上下文已清除 🔄',
+      timestamp: Date.now(),
+      excludeFromContext: true,
+      isContextSeparator: true,
+      groupId: groupId || state.currentGroupId || undefined,
+    };
+
+    // 先清除上下文，再添加分隔符消息
     dispatch({ type: 'CLEAR_CONTEXT' });
+    dispatch({ type: 'ADD_MESSAGE', payload: separatorMessage });
   };
 
   const createChatGroup = async (name: string, description?: string) => {

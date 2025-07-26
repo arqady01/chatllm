@@ -8,14 +8,25 @@ interface MessageBubbleProps {
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
   const isUser = message.role === 'user';
-  
+
   const formatTime = (timestamp: number) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString('zh-CN', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return date.toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
+
+  // 如果是上下文分隔符，显示特殊样式
+  if (message.isContextSeparator) {
+    return (
+      <View style={styles.separatorContainer}>
+        <View style={styles.separatorLine} />
+        <Text style={styles.separatorText}>{message.content}</Text>
+        <View style={styles.separatorLine} />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, isUser ? styles.userContainer : styles.assistantContainer]}>
@@ -101,6 +112,31 @@ const styles = StyleSheet.create({
   assistantTimestamp: {
     color: '#666',
     textAlign: 'left',
+  },
+  separatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 8,
+    marginHorizontal: 16,
+    backgroundColor: '#E3F2FD',
+    paddingVertical: 4,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  separatorLine: {
+    flex: 1,
+    height: 3,
+    backgroundColor: '#007AFF',
+    borderRadius: 1.5,
+  },
+  separatorText: {
+    marginHorizontal: 16,
+    fontSize: 12,
+    color: '#007AFF',
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });
 
