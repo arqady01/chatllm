@@ -261,7 +261,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="chevron-back" size={24} color="#007AFF" />
+          <Ionicons name="chevron-back" size={14} color="#007AFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{groupName}</Text>
         <View style={styles.headerRightSpace} />
@@ -337,7 +337,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
         >
           <Ionicons
             name="image-outline"
-            size={24}
+            size={20}
             color={isLoading ? '#ccc' : '#007AFF'}
           />
         </TouchableOpacity>
@@ -364,7 +364,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
         >
           <Ionicons
             name="refresh-outline"
-            size={24}
+            size={20}
             color={isLoading ? '#ccc' : '#007AFF'}
           />
         </TouchableOpacity>
@@ -391,7 +391,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
         >
           <Ionicons
             name="trash-outline"
-            size={24}
+            size={20}
             color={isLoading ? '#ccc' : '#FF3B30'}
           />
         </TouchableOpacity>
@@ -406,34 +406,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   header: {
-    backgroundColor: '#f5f5f5',
-    paddingTop: Platform.OS === 'ios' ? 50 : 20, // 适配状态栏
-    paddingBottom: 15,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    backgroundColor: 'transparent',
+    paddingTop: Platform.OS === 'ios' ? 44 : 16, // 适配状态栏，大幅缩短
+    paddingBottom: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    borderRadius: 16,
+    backgroundColor: 'transparent',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#333',
     flex: 1,
     textAlign: 'center',
   },
   headerRightSpace: {
-    width: 40,
-    height: 40,
+    width: 32,
+    height: 32,
   },
   messagesList: {
     flex: 1,
@@ -500,7 +499,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 12,
+    paddingBottom: 0,
     backgroundColor: 'white',
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
@@ -509,19 +509,19 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 16,
-    maxHeight: 100,
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 15,
+    maxHeight: 90,
     backgroundColor: '#f8f8f8',
-    marginRight: 8,
+    marginRight: 6,
   },
   sendButton: {
     backgroundColor: '#007AFF',
-    borderRadius: 20,
-    width: 40,
-    height: 40,
+    borderRadius: 18,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 0,
     paddingBottom: 22,
     backgroundColor: 'white',
   },
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: 'transparent',
   },
 
 });
