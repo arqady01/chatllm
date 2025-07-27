@@ -136,16 +136,15 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
             />
           </View>
 
-          {/* 上下文设置 */}
+          {/* 上下文条数控制 */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>上下文设置</Text>
+            <Text style={styles.sectionTitle}>上下文条数控制</Text>
             <Text style={styles.sectionDescription}>
               控制AI在对话中能记住多少条历史消息。输入0或正整数表示具体条数，输入-1表示无限制。
             </Text>
 
             {/* 上下文输入框 */}
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>上下文条数</Text>
               <TextInput
                 style={styles.contextInput}
                 value={contextInput}
@@ -238,12 +237,6 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     marginTop: 8,
-  },
-  inputLabel: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
-    marginBottom: 8,
   },
   contextInput: {
     borderWidth: 1,
