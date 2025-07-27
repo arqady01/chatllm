@@ -28,6 +28,7 @@ const ApiConfigScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [isDetectingUrl, setIsDetectingUrl] = useState(false);
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
   const [showModelPicker, setShowModelPicker] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
 
   const handleSave = async () => {
     if (!apiKey.trim()) {
@@ -207,15 +208,29 @@ const ApiConfigScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         <View style={styles.section}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>API Key *</Text>
-            <TextInput
-              style={styles.input}
-              value={apiKey}
-              onChangeText={setApiKey}
-              placeholder="请输入您的API Key"
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+            <View style={styles.apiKeyInputContainer}>
+              <TextInput
+                style={[styles.input, styles.apiKeyInput]}
+                value={apiKey}
+                onChangeText={setApiKey}
+                placeholder="请输入您的API Key"
+                secureTextEntry={!showApiKey}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TouchableOpacity
+                style={styles.toggleApiKeyButton}
+                onPress={() => setShowApiKey(!showApiKey)}
+                testID="toggle-api-key-button"
+              >
+                <Ionicons
+                  name={showApiKey ? "eye-off-outline" : "eye-outline"}
+                  size={20}
+                  color="#666"
+                  testID="eye-icon"
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
@@ -416,6 +431,22 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: '#fff',
+  },
+  apiKeyInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  apiKeyInput: {
+    flex: 1,
+    paddingRight: 50, // 为按钮留出空间
+  },
+  toggleApiKeyButton: {
+    position: 'absolute',
+    right: 12,
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   urlInputContainer: {
     flexDirection: 'row',
