@@ -172,13 +172,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const currentGroup = state.chatGroups.find(g => g.id === (groupId || state.currentGroupId));
       const contextLimit = currentGroup?.contextLimit;
 
-      // 构建当前上下文（包括刚添加的用户消息）
-      let currentContextMessages = [...state.contextMessages, userMessage];
+      // 构建当前上下文
+      let currentContextMessages: Message[];
 
-      // 应用上下文限制
-      if (contextLimit !== undefined && currentContextMessages.length > contextLimit) {
-        currentContextMessages = currentContextMessages.slice(-contextLimit);
-        console.log(`Applied context limit: ${contextLimit}, using last ${currentContextMessages.length} messages`);
+      if (contextLimit === 0) {
+        // 0条上下文：只发送当前用户消息，不包含任何历史
+        currentContextMessages = [userMessage];
+        console.log('Using 0 context: only current message');
+      } else {
+        // 包括历史上下文
+        currentContextMessages = [...state.contextMessages, userMessage];
+
+        // 应用上下文限制
+        if (contextLimit !== undefined && currentContextMessages.length > contextLimit) {
+          currentContextMessages = currentContextMessages.slice(-contextLimit);
+          console.log(`Applied context limit: ${contextLimit}, using last ${currentContextMessages.length} messages`);
+        }
       }
 
       // 使用工具类构建发送给API的消息数组

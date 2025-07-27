@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Alert,
   ScrollView,
-  Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ChatGroup } from '../types';
@@ -27,26 +26,53 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
   onUpdateGroup,
 }) => {
   const [groupName, setGroupName] = useState(chatGroup.name);
-  const [contextLimit, setContextLimit] = useState<number | undefined>(chatGroup.contextLimit);
-  const [isUnlimited, setIsUnlimited] = useState(chatGroup.contextLimit === undefined);
+  const [contextInput, setContextInput] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setGroupName(chatGroup.name);
-      setContextLimit(chatGroup.contextLimit);
-      setIsUnlimited(chatGroup.contextLimit === undefined);
+      // 将上下文限制转换为输入字符串
+      if (chatGroup.contextLimit === undefined) {
+        setContextInput('-1');  // -1代表无限制
+      } else {
+        setContextInput(chatGroup.contextLimit.toString());
+      }
     }
   }, [visible, chatGroup]);
 
   const handleSave = async () => {
     if (!groupName.trim()) {
-      Alert.alert('错误', '聊天组名称不能为空');
+      Alert.alert('错误', '对话组名称不能为空');
       return;
     }
 
-    if (!isUnlimited && (contextLimit === undefined || contextLimit < 1)) {
-      Alert.alert('错误', '上下文条数必须大于等于1');
+    // 解析上下文输入 - 严格的整数验证
+    let contextLimit: number | undefined;
+    const trimmedInput = contextInput.trim();
+
+    if (trimmedInput === '') {
+      Alert.alert('错误', '请输入上下文条数');
+      return;
+    }
+
+    // 检查是否为纯数字（包括负号）
+    if (!/^-?\d+$/.test(trimmedInput)) {
+      Alert.alert('错误', '只能输入整数，-1表示无限制，0或正整数表示具体条数');
+      return;
+    }
+
+    const num = parseInt(trimmedInput);
+
+    if (num === -1) {
+      // -1代表无限制
+      contextLimit = undefined;
+    } else if (num >= 0) {
+      // 0或正整数
+      contextLimit = num;
+    } else {
+      // 其他负数不允许
+      Alert.alert('错误', '不支持除-1以外的负数，-1表示无限制');
       return;
     }
 
@@ -55,7 +81,7 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
       const updatedGroup: ChatGroup = {
         ...chatGroup,
         name: groupName.trim(),
-        contextLimit: isUnlimited ? undefined : contextLimit,
+        contextLimit,
         updatedAt: Date.now(),
       };
 
@@ -63,29 +89,13 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
       onClose();
     } catch (error) {
       console.error('Failed to update chat group:', error);
-      Alert.alert('错误', '更新聊天组失败');
+      Alert.alert('错误', '更新对话组失败');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleContextLimitChange = (value: string) => {
-    const num = parseInt(value);
-    if (isNaN(num) || num < 1) {
-      setContextLimit(1);
-    } else {
-      setContextLimit(num);
-    }
-  };
 
-  const toggleUnlimited = (value: boolean) => {
-    setIsUnlimited(value);
-    if (value) {
-      setContextLimit(undefined);
-    } else {
-      setContextLimit(contextLimit || 10);
-    }
-  };
 
   return (
     <Modal
@@ -113,14 +123,14 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* 聊天组名称 */}
+          {/* 对话组名称 */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>聊天组名称</Text>
+            <Text style={styles.sectionTitle}>对话组名称</Text>
             <TextInput
               style={styles.textInput}
               value={groupName}
               onChangeText={setGroupName}
-              placeholder="请输入聊天组名称"
+              placeholder="请输入对话组名称"
               maxLength={50}
               editable={!isLoading}
             />
@@ -130,55 +140,22 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>上下文设置</Text>
             <Text style={styles.sectionDescription}>
-              控制AI在对话中能记住多少条历史消息。设置为1表示每次对话都是独立的，不限制表示记住所有历史消息。
+              控制AI在对话中能记住多少条历史消息。输入0或正整数表示具体条数，输入-1表示无限制。
             </Text>
 
-            {/* 不限制开关 */}
-            <View style={styles.switchRow}>
-              <View style={styles.switchLabelContainer}>
-                <Text style={styles.switchLabel}>不限制上下文</Text>
-                <Text style={styles.switchSubLabel}>记住所有历史消息</Text>
-              </View>
-              <Switch
-                value={isUnlimited}
-                onValueChange={toggleUnlimited}
-                disabled={isLoading}
-                trackColor={{ false: '#e0e0e0', true: '#007AFF' }}
-                thumbColor={isUnlimited ? '#ffffff' : '#f4f3f4'}
+            {/* 上下文输入框 */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>上下文条数</Text>
+              <TextInput
+                style={styles.contextInput}
+                value={contextInput}
+                onChangeText={setContextInput}
+                placeholder="输入整数（-1表示无限制）"
+                editable={!isLoading}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="numbers-and-punctuation"
               />
-            </View>
-
-            {/* 上下文条数输入 */}
-            {!isUnlimited && (
-              <View style={styles.contextInputContainer}>
-                <Text style={styles.contextInputLabel}>上下文条数</Text>
-                <View style={styles.contextInputRow}>
-                  <TextInput
-                    style={styles.contextInput}
-                    value={contextLimit?.toString() || ''}
-                    onChangeText={handleContextLimitChange}
-                    placeholder="1"
-                    keyboardType="numeric"
-                    maxLength={3}
-                    editable={!isLoading}
-                  />
-                  <Text style={styles.contextInputUnit}>条</Text>
-                </View>
-              </View>
-            )}
-
-            {/* 示例说明 */}
-            <View style={styles.exampleContainer}>
-              <Text style={styles.exampleTitle}>示例说明：</Text>
-              <Text style={styles.exampleText}>
-                • 设置为 1：每次对话都是独立的，AI不会记住之前的内容
-              </Text>
-              <Text style={styles.exampleText}>
-                • 设置为 3：AI会记住最近的3条对话（包括用户和AI的回复）
-              </Text>
-              <Text style={styles.exampleText}>
-                • 不限制：AI会记住所有历史对话，直到手动清除上下文
-              </Text>
             </View>
           </View>
         </ScrollView>
@@ -259,36 +236,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#f8f8f8',
   },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+  inputContainer: {
+    marginTop: 8,
   },
-  switchLabelContainer: {
-    flex: 1,
-  },
-  switchLabel: {
+  inputLabel: {
     fontSize: 16,
     color: '#333',
     fontWeight: '500',
-  },
-  switchSubLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
-  contextInputContainer: {
-    marginTop: 8,
-  },
-  contextInputLabel: {
-    fontSize: 14,
-    color: '#666',
     marginBottom: 8,
-  },
-  contextInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   contextInput: {
     borderWidth: 1,
@@ -297,32 +252,5 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: '#f8f8f8',
-    width: 80,
-    textAlign: 'center',
-  },
-  contextInputUnit: {
-    fontSize: 16,
-    color: '#666',
-    marginLeft: 8,
-  },
-  exampleContainer: {
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: '#f0f8ff',
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#007AFF',
-  },
-  exampleTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  exampleText: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 4,
-    lineHeight: 18,
   },
 });
