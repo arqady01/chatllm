@@ -20,6 +20,7 @@ export interface ChatGroup {
   lastMessage?: string;
   lastMessageTime?: number;
   contextLimit?: number; // 上下文条数限制，undefined表示不限制
+  temperature?: number; // 温度参数，控制输出的随机性，范围0-2，默认0.7
 }
 
 export interface ChatConfig {

@@ -27,6 +27,7 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
 }) => {
   const [groupName, setGroupName] = useState(chatGroup.name);
   const [contextInput, setContextInput] = useState<string>('');
+  const [temperature, setTemperature] = useState<number>(0.7);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -38,6 +39,8 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
       } else {
         setContextInput(chatGroup.contextLimit.toString());
       }
+      // 初始化温度值
+      setTemperature(chatGroup.temperature !== undefined ? chatGroup.temperature : 0.7);
     }
   }, [visible, chatGroup]);
 
@@ -82,6 +85,7 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
         ...chatGroup,
         name: groupName.trim(),
         contextLimit,
+        temperature,
         updatedAt: Date.now(),
       };
 
@@ -155,6 +159,55 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
                 autoCorrect={false}
                 keyboardType="numbers-and-punctuation"
               />
+            </View>
+          </View>
+
+          {/* 温度控制 */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>温度控制</Text>
+            <Text style={styles.sectionDescription}>
+              控制AI输出的随机性和创造力。较高的温度值（接近1.0）使输出更随机、创造力更强；较低的温度值（接近0.0）则使输出更集中、确定性更强。
+            </Text>
+
+            {/* 温度值显示 */}
+            <View style={styles.temperatureHeader}>
+              <Text style={styles.temperatureLabel}>当前温度值</Text>
+              <Text style={styles.temperatureValue}>{temperature.toFixed(1)}</Text>
+            </View>
+
+            {/* 温度输入框 */}
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.temperatureInput}
+                value={temperature.toString()}
+                onChangeText={(text) => {
+                  const value = parseFloat(text);
+                  if (!isNaN(value) && value >= 0 && value <= 1) {
+                    setTemperature(value);
+                  }
+                }}
+                placeholder="输入温度值 (0.0 - 1.0)"
+                editable={!isLoading}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="numeric"
+              />
+            </View>
+
+            {/* 温度值说明 */}
+            <View style={styles.temperatureGuide}>
+              <View style={styles.temperatureGuideItem}>
+                <Text style={styles.temperatureGuideLabel}>0.0 - 0.3</Text>
+                <Text style={styles.temperatureGuideDesc}>确定性强，适合事实性问答</Text>
+              </View>
+              <View style={styles.temperatureGuideItem}>
+                <Text style={styles.temperatureGuideLabel}>0.4 - 0.7</Text>
+                <Text style={styles.temperatureGuideDesc}>平衡模式，适合日常对话</Text>
+              </View>
+              <View style={styles.temperatureGuideItem}>
+                <Text style={styles.temperatureGuideLabel}>0.8 - 1.0</Text>
+                <Text style={styles.temperatureGuideDesc}>创造性强，适合创意写作</Text>
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -245,5 +298,53 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: '#f8f8f8',
+  },
+  temperatureHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  temperatureLabel: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  temperatureValue: {
+    fontSize: 18,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  temperatureInput: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#f8f8f8',
+    textAlign: 'center',
+  },
+  temperatureGuide: {
+    marginTop: 16,
+  },
+  temperatureGuideItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  temperatureGuideLabel: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '500',
+    minWidth: 80,
+  },
+  temperatureGuideDesc: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
+    textAlign: 'right',
   },
 });

@@ -25,7 +25,7 @@ export class OpenAIService {
     return baseUrl + endpoint;
   }
 
-  async sendMessage(messages: { role: string; content: string | any[] }[]): Promise<string> {
+  async sendMessage(messages: { role: string; content: string | any[] }[], temperature?: number): Promise<string> {
     if (!this.config.apiKey) {
       throw new Error('API Key is required');
     }
@@ -44,7 +44,7 @@ export class OpenAIService {
       model: this.config.model || 'gpt-3.5-turbo',
       messages,
       max_tokens: 1000,
-      temperature: 0.7,
+      temperature: temperature !== undefined ? temperature : 0.7,
     };
 
     try {

@@ -198,8 +198,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         throw new Error('没有有效的消息可以发送');
       }
 
-      console.log('Sending messages to API:', messages.length, 'messages');
-      const response = await openAIService.sendMessage(messages);
+      // 获取当前聊天组的温度设置
+      const temperature = currentGroup?.temperature;
+
+      console.log('Sending messages to API:', messages.length, 'messages', temperature !== undefined ? `with temperature: ${temperature}` : 'with default temperature');
+      const response = await openAIService.sendMessage(messages, temperature);
 
       if (!response || !response.trim()) {
         throw new Error('API返回了空响应');
