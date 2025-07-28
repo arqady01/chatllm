@@ -10,6 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Slider from '@react-native-community/slider';
 import { ChatGroup } from '../types';
 
 interface ChatSettingsModalProps {
@@ -26,23 +27,29 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
   onUpdateGroup,
 }) => {
   const [groupName, setGroupName] = useState(chatGroup.name);
-  const [contextInput, setContextInput] = useState<string>('');
+  const [contextSliderValue, setContextSliderValue] = useState<number>(10); // 滑块值，范围0-50，0表示无限制
   const [temperature, setTemperature] = useState<number>(0.7);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setGroupName(chatGroup.name);
-      // 将上下文限制转换为输入字符串
+      // 将上下文限制转换为滑块值
       if (chatGroup.contextLimit === undefined) {
-        setContextInput('-1');  // -1代表无限制
+        setContextSliderValue(0); // 滑块最左端表示无限制
       } else {
-        setContextInput(chatGroup.contextLimit.toString());
+        // 将上下文限制映射到滑块值（1-50）
+        setContextSliderValue(Math.min(Math.max(chatGroup.contextLimit, 1), 50));
       }
       // 初始化温度值
       setTemperature(chatGroup.temperature !== undefined ? chatGroup.temperature : 0.7);
     }
   }, [visible, chatGroup]);
+
+  // 处理上下文滑块值变化
+  const handleContextSliderChange = (value: number) => {
+    setContextSliderValue(value);
+  };
 
   const handleSave = async () => {
     if (!groupName.trim()) {
@@ -50,33 +57,14 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
       return;
     }
 
-    // 解析上下文输入 - 严格的整数验证
+    // 从滑块值获取上下文限制
     let contextLimit: number | undefined;
-    const trimmedInput = contextInput.trim();
-
-    if (trimmedInput === '') {
-      Alert.alert('错误', '请输入上下文条数');
-      return;
-    }
-
-    // 检查是否为纯数字（包括负号）
-    if (!/^-?\d+$/.test(trimmedInput)) {
-      Alert.alert('错误', '只能输入整数，-1表示无限制，0或正整数表示具体条数');
-      return;
-    }
-
-    const num = parseInt(trimmedInput);
-
-    if (num === -1) {
-      // -1代表无限制
+    if (contextSliderValue === 0) {
+      // 滑块值为0表示无限制
       contextLimit = undefined;
-    } else if (num >= 0) {
-      // 0或正整数
-      contextLimit = num;
     } else {
-      // 其他负数不允许
-      Alert.alert('错误', '不支持除-1以外的负数，-1表示无限制');
-      return;
+      // 滑块值1-50表示具体条数
+      contextLimit = Math.round(contextSliderValue);
     }
 
     setIsLoading(true);
@@ -144,21 +132,40 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>上下文条数控制</Text>
             <Text style={styles.sectionDescription}>
-              控制AI在对话中能记住多少条历史消息。输入0或正整数表示具体条数，输入-1表示无限制。
+              控制AI在对话中能记住多少条历史消息。滑动到最左端表示无限制，右侧数值表示具体条数（1-50条）。
             </Text>
 
-            {/* 上下文输入框 */}
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.contextInput}
-                value={contextInput}
-                onChangeText={setContextInput}
-                placeholder="输入整数（-1表示无限制）"
-                editable={!isLoading}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="numbers-and-punctuation"
+            {/* 上下文值显示 */}
+            <View style={styles.contextHeader}>
+              <Text style={styles.contextLabel}>当前设置</Text>
+              <Text style={styles.contextValue}>
+                {contextSliderValue === 0 ? '无限制' : `${Math.round(contextSliderValue)} 条`}
+              </Text>
+            </View>
+
+            {/* 上下文滑块 */}
+            <View style={styles.sliderContainer}>
+              <Slider
+                style={styles.slider}
+                value={contextSliderValue}
+                onValueChange={handleContextSliderChange}
+                minimumValue={0}
+                maximumValue={50}
+                step={1}
+                minimumTrackTintColor="#007AFF"
+                maximumTrackTintColor="#E5E5EA"
+                thumbStyle={styles.sliderThumb}
+                trackStyle={styles.sliderTrack}
+                disabled={isLoading}
               />
+            </View>
+
+            {/* 滑块标签 */}
+            <View style={styles.sliderLabels}>
+              <Text style={styles.sliderLabelText}>无限制</Text>
+              <Text style={styles.sliderLabelText}>1条</Text>
+              <Text style={styles.sliderLabelText}>25条</Text>
+              <Text style={styles.sliderLabelText}>50条</Text>
             </View>
           </View>
 
@@ -291,13 +298,50 @@ const styles = StyleSheet.create({
   inputContainer: {
     marginTop: 8,
   },
-  contextInput: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
+  contextHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  contextLabel: {
     fontSize: 16,
-    backgroundColor: '#f8f8f8',
+    color: '#333',
+    fontWeight: '500',
+  },
+  contextValue: {
+    fontSize: 18,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  sliderContainer: {
+    marginHorizontal: 8,
+    marginBottom: 12,
+  },
+  slider: {
+    width: '100%',
+    height: 40,
+  },
+  sliderThumb: {
+    backgroundColor: '#007AFF',
+    width: 24,
+    height: 24,
+  },
+  sliderTrack: {
+    height: 4,
+    borderRadius: 2,
+  },
+  sliderLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginHorizontal: 12,
+    marginBottom: 16,
+  },
+  sliderLabelText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
   },
   temperatureHeader: {
     flexDirection: 'row',
