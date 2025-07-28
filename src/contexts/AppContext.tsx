@@ -175,16 +175,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // 构建当前上下文
       let currentContextMessages: Message[];
 
-      if (contextLimit === 0) {
+      if (contextLimit === undefined) {
+        // undefined表示无限制：包含所有历史上下文
+        currentContextMessages = [...state.contextMessages, userMessage];
+        console.log('Using unlimited context: all messages');
+      } else if (contextLimit === 0) {
         // 0条上下文：只发送当前用户消息，不包含任何历史
         currentContextMessages = [userMessage];
         console.log('Using 0 context: only current message');
       } else {
-        // 包括历史上下文
+        // 包括历史上下文，但应用限制
         currentContextMessages = [...state.contextMessages, userMessage];
-
-        // 应用上下文限制
-        if (contextLimit !== undefined && currentContextMessages.length > contextLimit) {
+        if (currentContextMessages.length > contextLimit) {
           currentContextMessages = currentContextMessages.slice(-contextLimit);
           console.log(`Applied context limit: ${contextLimit}, using last ${currentContextMessages.length} messages`);
         }

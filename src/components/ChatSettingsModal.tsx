@@ -163,8 +163,8 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
             {/* 滑块标签 */}
             <View style={styles.sliderLabels}>
               <Text style={styles.sliderLabelText}>无限制</Text>
-              <Text style={styles.sliderLabelText}>1条</Text>
-              <Text style={styles.sliderLabelText}>25条</Text>
+              <Text style={styles.sliderLabelText}>17条</Text>
+              <Text style={styles.sliderLabelText}>33条</Text>
               <Text style={styles.sliderLabelText}>50条</Text>
             </View>
           </View>
