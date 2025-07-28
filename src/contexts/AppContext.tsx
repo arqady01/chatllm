@@ -172,6 +172,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const currentGroup = state.chatGroups.find(g => g.id === (groupId || state.currentGroupId));
       const contextLimit = currentGroup?.contextLimit;
 
+      console.log('🔍 发送消息时的上下文设置:');
+      console.log('  - 当前组ID:', groupId || state.currentGroupId);
+      console.log('  - 当前组:', currentGroup?.name);
+      console.log('  - 上下文限制:', contextLimit);
+
       // 构建当前上下文
       let currentContextMessages: Message[];
 

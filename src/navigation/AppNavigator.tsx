@@ -6,14 +6,17 @@ import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import ChatGroupsScreen from '../screens/ChatGroupsScreen';
 import ChatScreen from '../screens/ChatScreen';
+import ChatSettingsScreen from '../screens/ChatSettingsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import ApiConfigScreen from '../screens/ApiConfigScreen';
 import DataManagementScreen from '../screens/DataManagementScreen';
+import { ChatGroup } from '../types';
 
 // 定义导航参数类型
 export type ChatStackParamList = {
   ChatGroups: undefined;
   Chat: { groupId: string; groupName: string };
+  ChatSettings: { chatGroup: ChatGroup };
 };
 
 export type SettingsStackParamList = {
@@ -45,6 +48,13 @@ const ChatStackNavigator: React.FC = () => {
       <ChatStack.Screen
         name="Chat"
         component={ChatScreen}
+        options={{
+          headerShown: false
+        }}
+      />
+      <ChatStack.Screen
+        name="ChatSettings"
+        component={ChatSettingsScreen}
         options={{
           headerShown: false
         }}

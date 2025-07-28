@@ -25,29 +25,55 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
   chatGroup,
   onUpdateGroup,
 }) => {
+  // 计算滑块值的辅助函数
+  const getSliderValueFromContextLimit = (contextLimit: number | undefined): number => {
+    if (contextLimit === undefined) {
+      return 51; // 滑块最右端表示无限制
+    } else {
+      // 将上下文限制映射到滑块值（0-50）
+      return Math.min(Math.max(contextLimit, 0), 50);
+    }
+  };
+
   const [groupName, setGroupName] = useState(chatGroup.name);
-  const [contextSliderValue, setContextSliderValue] = useState<number>(10); // 滑块值，范围0-50，0表示无限制
-  const [temperature, setTemperature] = useState<number>(0.7);
+  const [contextSliderValue, setContextSliderValue] = useState<number>(() =>
+    getSliderValueFromContextLimit(chatGroup.contextLimit)
+  );
+  const [temperature, setTemperature] = useState<number>(() =>
+    chatGroup.temperature !== undefined ? chatGroup.temperature : 0.7
+  );
   const [isLoading, setIsLoading] = useState(false);
 
+  // 当chatGroup变化时更新状态
   useEffect(() => {
-    if (visible) {
-      setGroupName(chatGroup.name);
-      // 将上下文限制转换为滑块值
-      if (chatGroup.contextLimit === undefined) {
-        setContextSliderValue(51); // 滑块最右端表示无限制
-      } else {
-        // 将上下文限制映射到滑块值（0-50）
-        setContextSliderValue(Math.min(Math.max(chatGroup.contextLimit, 0), 50));
-      }
-      // 初始化温度值
-      setTemperature(chatGroup.temperature !== undefined ? chatGroup.temperature : 0.7);
-    }
-  }, [visible, chatGroup]);
+    console.log('🔧 ChatSettingsModal: 更新状态');
+    console.log('📊 chatGroup.contextLimit:', chatGroup.contextLimit);
+    console.log('📊 chatGroup.temperature:', chatGroup.temperature);
 
-  // 处理上下文滑块值变化
+    setGroupName(chatGroup.name);
+
+    // 计算并设置滑块值
+    const sliderValue = getSliderValueFromContextLimit(chatGroup.contextLimit);
+    setContextSliderValue(sliderValue);
+    console.log('🎛️ 更新滑块值:', sliderValue);
+
+    // 设置温度值
+    const tempValue = chatGroup.temperature !== undefined ? chatGroup.temperature : 0.7;
+    setTemperature(tempValue);
+    console.log('🌡️ 更新温度值:', tempValue);
+
+    console.log('✅ 状态更新完成');
+  }, [chatGroup]);
+
+  // 处理上下文滑块值变化 - 注意：这是非受控组件，只在用户拖动时调用
   const handleContextSliderChange = (value: number) => {
-    setContextSliderValue(value);
+    console.log('🎛️ 滑块值变化:', value);
+    setContextSliderValue(value); // 更新显示值
+  };
+
+  // 处理关闭模态框
+  const handleClose = () => {
+    onClose();
   };
 
   const handleSave = async () => {
@@ -57,13 +83,17 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
     }
 
     // 从滑块值获取上下文限制
+    console.log('💾 保存时的滑块值:', contextSliderValue);
+
     let contextLimit: number | undefined;
     if (contextSliderValue === 51) {
       // 滑块值为51表示无限制
       contextLimit = undefined;
+      console.log('💾 保存为无限制');
     } else {
       // 滑块值0-50表示具体条数（包括0表示不记住历史）
       contextLimit = Math.round(contextSliderValue);
+      console.log('💾 保存为具体条数:', contextLimit);
     }
 
     setIsLoading(true);
@@ -76,7 +106,11 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
         updatedAt: Date.now(),
       };
 
+      console.log('💾 即将保存的完整数据:', JSON.stringify(updatedGroup, null, 2));
+
       await onUpdateGroup(updatedGroup);
+
+      console.log('✅ 保存完成，关闭模态框');
       onClose();
     } catch (error) {
       console.error('Failed to update chat group:', error);
@@ -93,12 +127,12 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
       <View style={styles.container}>
         {/* 头部 */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
+          <TouchableOpacity onPress={handleClose} style={styles.cancelButton}>
             <Text style={styles.cancelText}>取消</Text>
           </TouchableOpacity>
           <Text style={styles.title}>聊天设置</Text>
@@ -147,9 +181,17 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
             {/* 上下文滑块 */}
             <View style={styles.sliderContainer}>
               <Slider
+                key={`context-slider-${chatGroup.id}-${chatGroup.contextLimit}`}
                 style={styles.slider}
                 value={contextSliderValue}
                 onValueChange={handleContextSliderChange}
+                onSlidingStart={() => {
+                  console.log('🎛️ 开始拖动滑块，当前状态值:', contextSliderValue);
+                }}
+                onSlidingComplete={(value) => {
+                  console.log('🎛️ 滑块拖动完成:', value);
+                  setContextSliderValue(value); // 最终确保状态同步
+                }}
                 minimumValue={0}
                 maximumValue={51}
                 step={1}
@@ -327,6 +369,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     textAlign: 'center',
+  },
+  debugText: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 4,
   },
   temperatureHeader: {
     flexDirection: 'row',

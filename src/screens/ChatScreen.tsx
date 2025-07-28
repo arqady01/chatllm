@@ -21,7 +21,7 @@ import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useApp } from '../contexts/AppContext';
 import MessageBubble from '../components/MessageBubble';
-import { ChatSettingsModal } from '../components/ChatSettingsModal';
+// import { ChatSettingsModal } from '../components/ChatSettingsModal'; // 不再需要Modal
 import { Message, ChatGroup } from '../types';
 import { ChatStackParamList } from '../navigation/AppNavigator';
 
@@ -52,7 +52,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
   const [selectedImageBase64, setSelectedImageBase64] = useState<string | null>(null);
   const [selectedImageMimeType, setSelectedImageMimeType] = useState<string>('image/jpeg');
   const [showImagePreview, setShowImagePreview] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  // const [showSettingsModal, setShowSettingsModal] = useState(false); // 不再需要Modal状态
   const flatListRef = useRef<FlatList>(null);
 
   // 获取当前组的消息和信息
@@ -289,7 +289,11 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
         <Text style={styles.headerTitle}>{currentGroup?.name || groupName}</Text>
         <TouchableOpacity
           style={styles.settingsButton}
-          onPress={() => setShowSettingsModal(true)}
+          onPress={() => {
+            if (currentGroup) {
+              navigation.navigate('ChatSettings', { chatGroup: currentGroup });
+            }
+          }}
         >
           <Ionicons name="settings-outline" size={20} color="#007AFF" />
         </TouchableOpacity>
@@ -425,15 +429,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route, navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* 聊天设置模态框 */}
-      {currentGroup && (
-        <ChatSettingsModal
-          visible={showSettingsModal}
-          onClose={() => setShowSettingsModal(false)}
-          chatGroup={currentGroup}
-          onUpdateGroup={handleUpdateGroup}
-        />
-      )}
+      {/* 聊天设置已改为独立页面，不再需要Modal */}
     </KeyboardAvoidingView>
   );
 };
