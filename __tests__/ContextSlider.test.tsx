@@ -82,21 +82,31 @@ describe('Context Slider Control Feature', () => {
 
   test('should map slider label positions correctly', () => {
     // 测试滑块标签位置映射（修复后）
-    const sliderRange = 50; // 0-50
+    const sliderRange = 51; // 0-51
     const labelPositions = [
-      { position: 0, value: 0, label: '无限制' },
+      { position: 0, value: 0, label: '不记住' },
       { position: 0.33, value: Math.round(sliderRange * 0.33), label: '17条' },
-      { position: 0.67, value: Math.round(sliderRange * 0.67), label: '33条' },
-      { position: 1, value: 50, label: '50条' }
+      { position: 0.67, value: Math.round(sliderRange * 0.67), label: '34条' },
+      { position: 1, value: 51, label: '无限制' }
     ];
 
     labelPositions.forEach(({ position, value, label }) => {
-      const actualValue = position === 0 ? 0 : Math.round(sliderRange * position);
+      const actualValue = Math.round(sliderRange * position);
       expect(actualValue).toBe(value);
 
-      const displayText = actualValue === 0 ? '无限制' : `${actualValue}条`;
-      if (actualValue === 0) {
+      let displayText;
+      if (actualValue === 51) {
+        displayText = '无限制';
+      } else if (actualValue === 0) {
+        displayText = '不记住历史';
+      } else {
+        displayText = `${actualValue}条`;
+      }
+
+      if (actualValue === 51) {
         expect(displayText).toBe('无限制');
+      } else if (actualValue === 0) {
+        expect(displayText).toBe('不记住历史');
       } else {
         expect(displayText).toContain(actualValue.toString());
       }

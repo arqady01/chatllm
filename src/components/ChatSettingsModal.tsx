@@ -36,10 +36,10 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
       setGroupName(chatGroup.name);
       // 将上下文限制转换为滑块值
       if (chatGroup.contextLimit === undefined) {
-        setContextSliderValue(0); // 滑块最左端表示无限制
+        setContextSliderValue(51); // 滑块最右端表示无限制
       } else {
-        // 将上下文限制映射到滑块值（1-50）
-        setContextSliderValue(Math.min(Math.max(chatGroup.contextLimit, 1), 50));
+        // 将上下文限制映射到滑块值（0-50）
+        setContextSliderValue(Math.min(Math.max(chatGroup.contextLimit, 0), 50));
       }
       // 初始化温度值
       setTemperature(chatGroup.temperature !== undefined ? chatGroup.temperature : 0.7);
@@ -59,11 +59,11 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
 
     // 从滑块值获取上下文限制
     let contextLimit: number | undefined;
-    if (contextSliderValue === 0) {
-      // 滑块值为0表示无限制
+    if (contextSliderValue === 51) {
+      // 滑块值为51表示无限制
       contextLimit = undefined;
     } else {
-      // 滑块值1-50表示具体条数
+      // 滑块值0-50表示具体条数（包括0表示不记住历史）
       contextLimit = Math.round(contextSliderValue);
     }
 
@@ -132,14 +132,16 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>上下文条数控制</Text>
             <Text style={styles.sectionDescription}>
-              控制AI在对话中能记住多少条历史消息。滑动到最左端表示无限制，右侧数值表示具体条数（1-50条）。
+              控制AI在对话中能记住多少条历史消息。0表示不记住任何历史（每次都是新对话），1-50表示记住对应条数，滑动到最右端表示无限制。
             </Text>
 
             {/* 上下文值显示 */}
             <View style={styles.contextHeader}>
               <Text style={styles.contextLabel}>当前设置</Text>
               <Text style={styles.contextValue}>
-                {contextSliderValue === 0 ? '无限制' : `${Math.round(contextSliderValue)} 条`}
+                {contextSliderValue === 51 ? '无限制' :
+                 contextSliderValue === 0 ? '不记住历史' :
+                 `${Math.round(contextSliderValue)} 条`}
               </Text>
             </View>
 
@@ -150,7 +152,7 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
                 value={contextSliderValue}
                 onValueChange={handleContextSliderChange}
                 minimumValue={0}
-                maximumValue={50}
+                maximumValue={51}
                 step={1}
                 minimumTrackTintColor="#007AFF"
                 maximumTrackTintColor="#E5E5EA"
@@ -162,10 +164,10 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
 
             {/* 滑块标签 */}
             <View style={styles.sliderLabels}>
-              <Text style={styles.sliderLabelText}>无限制</Text>
+              <Text style={styles.sliderLabelText}>不记住</Text>
               <Text style={styles.sliderLabelText}>17条</Text>
-              <Text style={styles.sliderLabelText}>33条</Text>
-              <Text style={styles.sliderLabelText}>50条</Text>
+              <Text style={styles.sliderLabelText}>34条</Text>
+              <Text style={styles.sliderLabelText}>无限制</Text>
             </View>
           </View>
 
@@ -209,24 +211,6 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
               <Text style={styles.sliderLabelText}>0.3</Text>
               <Text style={styles.sliderLabelText}>0.7</Text>
               <Text style={styles.sliderLabelText}>1.0</Text>
-            </View>
-
-
-
-            {/* 温度值说明 */}
-            <View style={styles.temperatureGuide}>
-              <View style={styles.temperatureGuideItem}>
-                <Text style={styles.temperatureGuideLabel}>0.0 - 0.3</Text>
-                <Text style={styles.temperatureGuideDesc}>确定性强，适合事实性问答</Text>
-              </View>
-              <View style={styles.temperatureGuideItem}>
-                <Text style={styles.temperatureGuideLabel}>0.4 - 0.7</Text>
-                <Text style={styles.temperatureGuideDesc}>平衡模式，适合日常对话</Text>
-              </View>
-              <View style={styles.temperatureGuideItem}>
-                <Text style={styles.temperatureGuideLabel}>0.8 - 1.0</Text>
-                <Text style={styles.temperatureGuideDesc}>创造性强，适合创意写作</Text>
-              </View>
             </View>
           </View>
         </ScrollView>
@@ -377,27 +361,5 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     marginBottom: 16,
   },
-  temperatureGuide: {
-    marginTop: 16,
-  },
-  temperatureGuideItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  temperatureGuideLabel: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '500',
-    minWidth: 80,
-  },
-  temperatureGuideDesc: {
-    fontSize: 14,
-    color: '#666',
-    flex: 1,
-    textAlign: 'right',
-  },
+
 });
