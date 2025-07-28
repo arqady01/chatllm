@@ -182,15 +182,47 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
               <Text style={styles.temperatureValue}>{temperature.toFixed(1)}</Text>
             </View>
 
-            {/* 温度输入框 */}
-            <View style={styles.inputContainer}>
+            {/* 温度滑块 */}
+            <View style={styles.sliderContainer}>
+              <Slider
+                style={styles.slider}
+                value={temperature}
+                onValueChange={(value) => {
+                  // 修复浮点数精度问题
+                  const roundedValue = Math.round(value * 10) / 10;
+                  setTemperature(roundedValue);
+                }}
+                minimumValue={0}
+                maximumValue={1}
+                step={0.1}
+                minimumTrackTintColor="#007AFF"
+                maximumTrackTintColor="#E5E5EA"
+                thumbStyle={styles.sliderThumb}
+                trackStyle={styles.sliderTrack}
+                disabled={isLoading}
+              />
+            </View>
+
+            {/* 温度滑块标签 */}
+            <View style={styles.temperatureSliderLabels}>
+              <Text style={styles.sliderLabelText}>0.0</Text>
+              <Text style={styles.sliderLabelText}>0.3</Text>
+              <Text style={styles.sliderLabelText}>0.7</Text>
+              <Text style={styles.sliderLabelText}>1.0</Text>
+            </View>
+
+            {/* 温度输入框（高级选项） */}
+            <View style={styles.advancedOption}>
+              <Text style={styles.advancedLabel}>高级设置（直接输入）</Text>
               <TextInput
                 style={styles.temperatureInput}
-                value={temperature.toString()}
+                value={temperature.toFixed(1)}
                 onChangeText={(text) => {
                   const value = parseFloat(text);
                   if (!isNaN(value) && value >= 0 && value <= 1) {
-                    setTemperature(value);
+                    // 修复浮点数精度问题
+                    const roundedValue = Math.round(value * 10) / 10;
+                    setTemperature(roundedValue);
                   }
                 }}
                 placeholder="输入温度值 (0.0 - 1.0)"
@@ -367,6 +399,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#f8f8f8',
     textAlign: 'center',
+  },
+  temperatureSliderLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginHorizontal: 12,
+    marginBottom: 16,
+  },
+  advancedOption: {
+    marginTop: 8,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  advancedLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+    fontWeight: '500',
   },
   temperatureGuide: {
     marginTop: 16,

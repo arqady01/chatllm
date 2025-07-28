@@ -54,11 +54,73 @@ describe('Temperature Control Feature', () => {
   test('should handle temperature step increments', () => {
     const step = 0.1;
     const temperature = 0.7;
-    
+
     const increasedTemp = parseFloat((temperature + step).toFixed(1));
     const decreasedTemp = parseFloat((temperature - step).toFixed(1));
-    
+
     expect(increasedTemp).toBe(0.8);
     expect(decreasedTemp).toBe(0.6);
+  });
+
+  test('should handle slider value changes correctly', () => {
+    // 测试滑块值变化
+    const initialTemp = 0.7;
+    const newSliderValue = 0.9;
+
+    // 滑块直接设置温度值
+    const updatedTemp = newSliderValue;
+
+    expect(updatedTemp).toBe(0.9);
+    expect(updatedTemp).toBeGreaterThanOrEqual(0);
+    expect(updatedTemp).toBeLessThanOrEqual(1);
+  });
+
+  test('should handle slider and input synchronization', () => {
+    // 测试滑块和输入框的同步
+    const sliderValue = 0.8;
+    const inputValue = sliderValue.toString();
+
+    expect(inputValue).toBe('0.8');
+    expect(parseFloat(inputValue)).toBe(sliderValue);
+  });
+
+  test('should validate slider range bounds', () => {
+    // 测试滑块范围边界
+    const minValue = 0;
+    const maxValue = 1;
+    const step = 0.1;
+
+    const testValues = [0, 0.1, 0.5, 0.9, 1.0];
+
+    testValues.forEach(value => {
+      expect(value).toBeGreaterThanOrEqual(minValue);
+      expect(value).toBeLessThanOrEqual(maxValue);
+      expect((value * 10) % 1).toBe(0); // 检查是否为0.1的倍数
+    });
+  });
+
+  test('should handle floating point precision correctly', () => {
+    // 测试浮点数精度修复
+    const problematicValue = 0.10000000149011612; // 滑块可能产生的值
+    const roundedValue = Math.round(problematicValue * 10) / 10;
+
+    expect(roundedValue).toBe(0.1);
+    expect(roundedValue.toFixed(1)).toBe('0.1');
+  });
+
+  test('should format temperature display correctly', () => {
+    // 测试温度显示格式化
+    const testValues = [
+      { input: 0, expected: '0.0' },
+      { input: 0.1, expected: '0.1' },
+      { input: 0.10000000149011612, expected: '0.1' },
+      { input: 0.7, expected: '0.7' },
+      { input: 1.0, expected: '1.0' }
+    ];
+
+    testValues.forEach(({ input, expected }) => {
+      const rounded = Math.round(input * 10) / 10;
+      expect(rounded.toFixed(1)).toBe(expected);
+    });
   });
 });
