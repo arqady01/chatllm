@@ -9,7 +9,6 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { ChatGroup } from '../types';
 
@@ -132,7 +131,7 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>上下文条数控制</Text>
             <Text style={styles.sectionDescription}>
-              控制AI在对话中能记住多少条历史消息。0表示不记住任何历史（每次都是新对话），1-50表示记住对应条数，滑动到最右端表示无限制。
+              控制对话中携带的历史消息数量。0表示不记住任何历史（每次都是新对话）
             </Text>
 
             {/* 上下文值显示 */}
@@ -156,8 +155,7 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
                 step={1}
                 minimumTrackTintColor="#007AFF"
                 maximumTrackTintColor="#E5E5EA"
-                thumbStyle={styles.sliderThumb}
-                trackStyle={styles.sliderTrack}
+                thumbTintColor="#007AFF"
                 disabled={isLoading}
               />
             </View>
@@ -175,7 +173,7 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>温度控制</Text>
             <Text style={styles.sectionDescription}>
-              控制AI输出的随机性和创造力。较高的温度值（接近1.0）使输出更随机、创造力更强；较低的温度值（接近0.0）则使输出更集中、确定性更强。
+              较高的温度值输出则更随机、创造力更强，较低的温度值输出则更集中、确定性更强。
             </Text>
 
             {/* 温度值显示 */}
@@ -199,8 +197,7 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
                 step={0.1}
                 minimumTrackTintColor="#007AFF"
                 maximumTrackTintColor="#E5E5EA"
-                thumbStyle={styles.sliderThumb}
-                trackStyle={styles.sliderTrack}
+                thumbTintColor="#007AFF"
                 disabled={isLoading}
               />
             </View>
@@ -319,15 +316,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 40,
   },
-  sliderThumb: {
-    backgroundColor: '#007AFF',
-    width: 24,
-    height: 24,
-  },
-  sliderTrack: {
-    height: 4,
-    borderRadius: 2,
-  },
+
   sliderLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
