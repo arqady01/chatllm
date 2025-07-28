@@ -75,13 +75,14 @@ describe('Temperature Control Feature', () => {
     expect(updatedTemp).toBeLessThanOrEqual(1);
   });
 
-  test('should handle slider and input synchronization', () => {
-    // 测试滑块和输入框的同步
+  test('should handle slider-only control correctly', () => {
+    // 测试纯滑块控制（移除输入框后）
     const sliderValue = 0.8;
-    const inputValue = sliderValue.toString();
+    const roundedValue = Math.round(sliderValue * 10) / 10;
 
-    expect(inputValue).toBe('0.8');
-    expect(parseFloat(inputValue)).toBe(sliderValue);
+    expect(roundedValue).toBe(0.8);
+    expect(roundedValue).toBeGreaterThanOrEqual(0);
+    expect(roundedValue).toBeLessThanOrEqual(1);
   });
 
   test('should validate slider range bounds', () => {

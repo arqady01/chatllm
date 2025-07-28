@@ -211,27 +211,7 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
               <Text style={styles.sliderLabelText}>1.0</Text>
             </View>
 
-            {/* 温度输入框（高级选项） */}
-            <View style={styles.advancedOption}>
-              <Text style={styles.advancedLabel}>高级设置（直接输入）</Text>
-              <TextInput
-                style={styles.temperatureInput}
-                value={temperature.toFixed(1)}
-                onChangeText={(text) => {
-                  const value = parseFloat(text);
-                  if (!isNaN(value) && value >= 0 && value <= 1) {
-                    // 修复浮点数精度问题
-                    const roundedValue = Math.round(value * 10) / 10;
-                    setTemperature(roundedValue);
-                  }
-                }}
-                placeholder="输入温度值 (0.0 - 1.0)"
-                editable={!isLoading}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="numeric"
-              />
-            </View>
+
 
             {/* 温度值说明 */}
             <View style={styles.temperatureGuide}>
@@ -391,32 +371,11 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '600',
   },
-  temperatureInput: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#f8f8f8',
-    textAlign: 'center',
-  },
   temperatureSliderLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginHorizontal: 12,
     marginBottom: 16,
-  },
-  advancedOption: {
-    marginTop: 8,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  advancedLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-    fontWeight: '500',
   },
   temperatureGuide: {
     marginTop: 16,
