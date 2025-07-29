@@ -121,7 +121,7 @@ const AppNavigator: React.FC = () => {
           // 根据当前路由动态隐藏Tab栏
           tabBarStyle: ((route) => {
             const routeName = getFocusedRouteNameFromRoute(route) ?? '';
-            if (routeName === 'Chat') {
+            if (routeName === 'Chat' || routeName === 'ChatSettings') {
               return { display: 'none' };
             }
             return {};
